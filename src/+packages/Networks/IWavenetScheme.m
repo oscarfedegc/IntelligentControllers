@@ -5,10 +5,11 @@ classdef IWavenetScheme < NetworkScheme
     
     methods (Access = public)
         function self = IWavenetScheme()
+            return
         end
         
         function initInternalMemory(self)
-            self.functionMemory = zeros(self.filterLayer.coeffsM, self.hiddenNeuronLayer.neurons);
+            self.functionMemory = zeros(self.filterLayer.getCoeffsM(), self.hiddenNeuronLayer.getNeurons());
             self.derivativeMemory = self.functionMemory;
         end
         
@@ -27,7 +28,40 @@ classdef IWavenetScheme < NetworkScheme
         end
         
         function update(self, controlSignals, identificationErrors)
-            self.paramterGradient(controlSignals, identificationErrors);
+            self.paramGradients(controlSignals, identificationErrors);
+        end
+        
+        function gamma = getGamma(self)
+            gamma = self.filterLayer.getGamma();
+        end
+        
+        function plotSynapticWeights(self)
+            cols = self.outputs;
+            rows = self.hiddenNeuronLayer.getNeurons();
+            weigths = self.perfSynapticWeights;
+            
+            tag = {'theta'; 'phi'};
+            
+            figure('Name','Synaptic weigths','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+            
+            for col = 1:cols
+                for row = 1:rows
+                    subplot(rows, cols, 1 + cols*(row-1))
+                end
+            end
+            
+            for row = 1:rows
+                subplot(rows, cols, 1 + cols*(row-1))
+                    plot(weigths(:, row + (col-1)),'r','LineWidth',1)
+                    ylabel(sprintf('w_{\\%s_%i}', string(tag(col)), row))
+                    
+                if row == rows; xlabel('Samples, k'); end
+                
+                subplot(rows, cols, 2 + cols*(row-1))
+                    plot(weigths(:,row),'r','LineWidth',1)
+                    ylabel(sprintf('w_{\\%s_%i}', string(tag(2)), row))
+            end
+            xlabel('Samples, k')
         end
     end
     
@@ -41,7 +75,7 @@ classdef IWavenetScheme < NetworkScheme
             output = [newValues; matrix(1:a-1,:)];
         end
         
-        function paramterGradient(self, controlSignals, error)
+        function paramGradients(self, controlSignals, error)
             U = sum(controlSignals);
             Ie = diag(error,0);
             If = error;

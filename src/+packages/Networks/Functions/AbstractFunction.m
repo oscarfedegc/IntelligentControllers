@@ -1,10 +1,11 @@
 classdef AbstractFunction < handle
-    properties (Access = public)
+    properties (Access = protected)
         neurons {mustBeInteger}
         scales, shifts, tau, funcOutput, dfuncOutput, learningRates {mustBeNumeric}
+        perfScales, perfShifts, perfTau, perfFuncOutput, perfdfunOutput {mustBeNumeric}
     end
     
-    methods (Abstract = true)
+    methods (Abstract)
         evaluateFunction();
     end
     
@@ -31,8 +32,34 @@ classdef AbstractFunction < handle
         end
         
         function charts(self)
-            self.plotScalesShiftsTau();
+            self.plotParameters();
             self.plotFunctionVals();
+        end
+    end
+    
+    methods (Access = public)
+        function initPerformance(self, samples)
+            self.perfScales = zeros(samples, self.neurons);
+            self.perfShifts = self.perfScales;
+            self.perfTau = self.perfScales;
+            self.perfFuncOutput = self.perfScales;
+            self.perfdfunOutput = self.perfScales;
+        end
+        
+        function setPerformance(self, iteration)
+            self.perfScales(iteration,:) = self.scales;
+            self.perfShifts(iteration,:) = self.shifts;
+            self.perfTau(iteration,:) = self.tau;
+            self.perfFuncOutput(iteration,:) = self.funcOutput;
+            self.perfdfunOutput(iteration,:) = self.dfuncOutput;
+        end
+        
+        function [scales, shifts, tau, funcOutput, dfuncOutput] = getPerformance(self)
+            scales = self.perfScales;
+            shifts = self.perfShifts;
+            tau = self.perfTau;
+            funcOutput = self.perfFuncOutput;
+            dfuncOutput = self.perfdfunOutput;
         end
     end
     
@@ -68,51 +95,55 @@ classdef AbstractFunction < handle
         function shifts = getShifts(self)
             shifts = self.shifts;
         end
+        
+        function neurons = getNeurons(self)
+            neurons = self.neurons;
+        end
     end
     
     methods (Access = protected)
-        function plotScalesShiftsTau(self)
+        function plotParameters(self)
             cols = 3;
             rows = self.neurons;
             
-            figure('Name','Parámetros de escalamiento y traslación','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+            figure('Name','Scaling and shifting parameters','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
             for row = 1:rows
                 subplot(rows, cols, 1 + cols*(row-1))
                     plot(self.perfScales(:,row),'r','LineWidth',1)
                     ylabel(sprintf('a_{%i}', row))
                     
-                if row == rows; xlabel('Muestras, k'); end
+                if row == rows; xlabel('Samples, k'); end
                 
                 subplot(rows, cols, 2 + cols*(row-1))
                     plot(self.perfShifts(:,row),'r','LineWidth',1)
                     ylabel(sprintf('b_{%i}', row))
                     
-                if row == rows; xlabel('Muestras, k'); end
+                if row == rows; xlabel('Samples, k'); end
                
                 subplot(rows, cols, 3 + cols*(row-1))
                     plot(self.perfTau(:,row),'r','LineWidth',1)
                     ylabel(sprintf('\\tau_{%i}', row))
             end
-            xlabel('Muestras, k')
+            xlabel('Samples, k')
         end
         
         function plotFunctionVals(self)
             cols = 2;
             rows = self.neurons;
             
-            figure('Name','Salidas de las neuronas y sus derivadas','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+            figure('Name','Neuron outputs and its derivatives','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
             for row = 1:rows
                 subplot(rows, cols, 1 + cols*(row-1))
-                    plot(self.perfFunc(:,row),'r','LineWidth',1)
+                    plot(self.perfFuncOutput(:,row),'r','LineWidth',1)
                     ylabel(sprintf('\\psi(\\tau_{%i})', row))
                     
-                if row == rows; xlabel('Muestras, k'); end
+                if row == rows; xlabel('Samples, k'); end
                 
                 subplot(rows, cols, 2 + cols*(row-1))
-                    plot(self.perfdFunc(:,row),'r','LineWidth',1)
+                    plot(self.perfdfunOutput(:,row),'r','LineWidth',1)
                     ylabel(sprintf('\\partial\\psi(\\tau_{%i})', row))
             end
-            xlabel('Muestras, k');
+            xlabel('Samples, k');
         end
         
         function calculateTau(self, instant)

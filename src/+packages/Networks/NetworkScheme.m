@@ -3,6 +3,7 @@ classdef NetworkScheme < handle
         inputLayer, outputNetworkLayer, filterOutputLayer {mustBeNumeric}
         synapticWeights, sWeightLearningRate {mustBeNumeric}
         inputs, outputs, numberSynapticWeights {mustBeInteger}
+        perfSynapticWeights {mustBeNumeric}
         hiddenNeuronLayer % {must be AbstractActivationFunction}
         filterLayer % {must be ImplementFilters}
     end
@@ -10,9 +11,17 @@ classdef NetworkScheme < handle
     methods (Abstract = true)
         evaluate();
         update();
+        getGamma();
+        plotSynapticWeights();
     end
     
     methods (Access = public)
+        function charts(self)
+            self.hiddenNeuronLayer.charts();
+            self.filterLayer.charts();
+            self.plotSynapticWeights();
+        end
+        
         function setInputs(self, values)
             self.inputLayer = values;
         end
@@ -39,27 +48,27 @@ classdef NetworkScheme < handle
             outputs = self.filterOutputLayer;
         end
         
-%         function initPerformanceArrays(self, samples)
-%             self.perfSynapticWeights = zeros(samples, self.outputs * self.hiddenNeuronLayer.neurons);
-%             self.hiddenNeuronLayer.initPerformanceArrays(samples);
-%             self.filters.initPerformanceArrays(samples);
-%         end
-%         
-%         function savePerformance(self, index)
-%             cols = 0:self.hiddenNeuronLayer.neurons:self.elements;
-%             for item = 1:length(cols)-1
-%             	self.perfSynapticWeights(index, cols(item)+1:cols(item+1)) = self.synapticWeights(item,:);
-%             end
-%             self.hiddenNeuronLayer.savePerformance(index);
-%             self.filters.savePerformance(index);
-%         end
+        function initPerformance(self, samples)
+            self.perfSynapticWeights = zeros(samples, self.outputs * self.hiddenNeuronLayer.getNeurons());
+            self.hiddenNeuronLayer.initPerformance(samples);
+            self.filterLayer.initPerformance(samples);
+        end
+        
+        function setPerformance(self, iteration)
+            cols = self.numberSynapticWeights;
+            for item = 1:length(cols)-1
+            	self.perfSynapticWeights(iteration, cols(item)+1:cols(item+1)) = self.synapticWeights(item,:);
+            end
+            self.hiddenNeuronLayer.setPerformance(iteration);
+            self.filterLayer.setPerformance(iteration);
+        end
         
         function buildNeuronLayer(self, functionType, functionSelected, neurons, inputs, outputs)
             self.hiddenNeuronLayer = FunctionFactory.create(functionType, functionSelected, neurons);
             
             self.inputs = inputs;
             self.outputs = outputs;
-            self.numberSynapticWeights = neurons * outputs;
+            self.numberSynapticWeights = 0:self.hiddenNeuronLayer.getNeurons(): neurons*outputs;
             self.inputLayer = zeros(1,inputs);
             self.filterOutputLayer = zeros(1,outputs);
             self.initialize(outputs, neurons);

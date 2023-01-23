@@ -47,12 +47,16 @@ classdef ITrajectory < handle
             samples = self.samples;
         end
         
-        function instant = getInstant(self, iter)
+        function instant = getTime(self, iter)
             instant = self.instants(iter);
         end
         
         function rst = getInstants(self)
             rst = self.instants;
+        end
+        
+        function positions = getReferences(self, iter)
+            positions = self.positions(iter,:);
         end
         
         function position = getPosition(self, iter, degree)
@@ -83,7 +87,7 @@ classdef ITrajectory < handle
                 start = intervals(idx);
                 finish = intervals(idx+1);
                 
-                t = self.instants(start:finish);               
+                t = self.instants(start:finish);
                 
                 temp(start:finish) = self.segment(t, references(idx), references(idx+1));
             end

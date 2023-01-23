@@ -53,7 +53,6 @@ classdef IPIDController < Controller
         % This function is in charge of calculate the control signal.
         %
         %   @param {object} self Stands for instantiated object from this class.
-        %
         function evaluate(self)            
             u = self.signal;
             kp = self.gains(1);
@@ -69,8 +68,7 @@ classdef IPIDController < Controller
         % Shows the behavior of the gains and the control signal by means of a graph.
         %
         %   @param {object} self Stands for instantiated object from this class.
-        %   @param {string} title Indicates the name graph to show.
-        %
+        %   @param {string} title Indicat
         function charts(self, title)
             figure('Name',title,'NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
             

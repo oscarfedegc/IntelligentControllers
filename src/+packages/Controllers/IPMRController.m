@@ -1,12 +1,12 @@
 % This class implements the PID Controller and its methods to calculate the
 % control signal and autotune its gains.
-classdef IPIDController < Controller
+classdef IPMRController < Controller
     methods (Access = public)
         % Class constructor.
         %
         %   @returns {object} self Is the instantiated object.
         %
-        function self = IPIDController()
+        function self = IPMRController()
             self.signal = 0;
             self.gains = rand(1,3);
             self.updateRates = zeros(1,3);

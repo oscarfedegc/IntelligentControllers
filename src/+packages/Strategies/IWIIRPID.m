@@ -1,74 +1,120 @@
+% This class that calls the other classes and generates the simulations
 classdef IWIIRPID < Strategy
-    properties (Access = public)
-        model % {must be Plant}
-        controllers % {must be Controller}
-        network % {must be NetworkScheme}
-        trajectories % {must be ITrajectories}
-        isRandom {mustBeInteger}
+    properties (Access = private)
+        tFinal, period {mustBeNumeric}
+        plantType % {must be PlantList}
+        controllerType % {must be ControllerTypes}
+        references, controllerGains, controllerRates % {must be Structure}
+        
+        nnaType % {must be NetworkList}
+        functionType % {must be FuntionList}
+        functionSelected % {must be WaveletList, WindowList or []}
+        amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
+        learningRates, persistentSignal, initialStates {mustBeNumeric}
     end
     
     methods (Access = public)
+        % Class constructor
         function self = IWIIRPID()
             return
         end
         
-        function trajectoryBuilder(self, tFinal, period, pitchReference, yawReference)
-            self.trajectories = ITrajectory(tFinal, period);
-            self.trajectories.add(pitchReference);
-            self.trajectories.add(yawReference);
+        % In this function, the user must give the simulations parameters
+        function setup(self)
+            % Time parameters
+            self.tFinal = 10;        % Simulation time [sec]
+            
+            % Plant parameters
+            self.plantType = PlantList.helicopter2DOF;
+            self.period = 0.005;     % Plant sampling period [sec]
+            self.initialStates = [-40 0 0 0];
+            
+            % Trajectory parameters (positions in degrees)
+            self.references = struct('pitch', [0 0 10 10 10 0 0], ...
+                                     'yaw', [0 0 -20 -20 0 0 20 10 10 0 0]);
+            
+            % Controller parameters
+            self.controllerType = ControllerTypes.PID;
+            self.controllerGains = struct('pitch', [1 1 1], 'yaw', [1 1 1]);
+            self.controllerRates = struct('pitch', [1 1 1], 'yaw', [1 1 1]);
+            
+            % Wavenet-IIR parameters
+            self.functionType = FunctionList.wavelet;
+            self.functionSelected = WaveletList.morlet;
+            self.amountFunctions = 3;
+            
+            self.feedbacks = 4;
+            self.feedforwards = 5;
+            self.persistentSignal = 1e-3;
+            
+            self.nnaType = NetworkList.Wavenet;
+            self.inputs = 2;
+            self.outputs = 2;
+            
+            self.learningRates = [1e-8, 1e-8, 1e-8, 1e-4, 1e-2];
         end
         
-        function modelBuilder(self, period, initPositions)
-            self.model = PlantFactory.create();
-            self.model.setPeriod(period);
-            self.model.initStates(self.trajectories.getSamples(), deg2rad(initPositions));
-        end
-        
-        function controllerBuilder(self)
-            pitchControl = ControllerFactory.create(ControllerTypes.PID);
-            yawControl = ControllerFactory.create(ControllerTypes.PID);
+        % This funcion calls the class to generates the objects for the simulation.
+        function builder(self)
+            % Building the trajectories
+            self.trajectories = ITrajectory(self.tFinal, self.period);
+            self.trajectories.add(self.references.pitch)
+            self.trajectories.add(self.references.yaw)
             
-            pitchControl.setGains([100 2.5 50]);
-            pitchControl.setUpdateRates([0.75 7.5e-5 1.25]);
+            % Bulding the plant
+            samples = self.trajectories.getSamples();
             
-            yawControl.setGains([150 0.5 15]);
-            yawControl.setUpdateRates([0.75 5e-5 1.25]);
+            self.model = PlantFactory.create(self.plantType);
+            self.model.setPeriod(self.period);
+            self.model.setInitialStates(samples, deg2rad(self.initialStates))
             
-            self.controllers = [pitchControl, yawControl];
-        end
-        
-        function networkBuilder(self, functionType, selection, neurons, inputs, outputs, coeffsM, coeffsN)
-            self.network = NetworkFactory.create(NetworkList.Wavenet);
-            self.network.buildNeuronLayer(functionType, selection, neurons, inputs, outputs);
-            self.network.buildFilterLayer(inputs, coeffsM, coeffsN, 0.1);
-            self.network.setLearningRates(rand(1,5));
-            self.network.initInternalMemory();
+            % Building the pitch controller            
+            pitchController = ControllerFactory.create(self.controllerType);
+            pitchController.setGains(self.controllerGains.pitch)
+            pitchController.setUpdateRates(self.controllerRates.pitch);
+            pitchController.initPerformance(samples);
+            
+            % Buildin the yaw controller
+            yawController = ControllerFactory.create(self.controllerType);
+            yawController.setGains(self.controllerGains.yaw)
+            yawController.setUpdateRates(self.controllerRates.yaw);
+            yawController.initPerformance(samples);
+            
+            self.controllers = [pitchController, yawController];
+            
+            % Building the Wavenet-IIR
+            self.neuralNetwork = NetworkFactory.create(self.nnaType);
+            self.neuralNetwork.buildNeuronLayer(self.functionType, ...
+                self.functionSelected, self.amountFunctions, self.inputs, self.outputs);
+            self.neuralNetwork.buildFilterLayer(self.inputs, self.feedbacks, ...
+                self.feedforwards, self.persistentSignal);
+            self.neuralNetwork.setLearningRates(self.learningRates);
+            self.neuralNetwork.initInternalMemory();
+            self.neuralNetwork.initPerformance(samples);
         end
         
         function execute(self)
             for iter = 1:self.trajectories.getSamples()
-                kT = self.trajectories.getInstant(iter);               
-                yRef = self.trajectories.getPosition(iter,[1 2]);
+                kT = self.trajectories.getTime(iter);
+                yRef = self.trajectories.getReferences(iter);
                 
                 up = self.controllers(1).getSignal();
                 uy = self.controllers(2).getSignal();
                 u = [up uy];
                 
-                self.network.evaluate(kT, u)
+                self.neuralNetwork.evaluate(kT, u)
                 
                 yMes = self.model.measured(u, iter);
-                yEst = self.network.getOutputs();
-                Gamma = self.network.filterLayer.getGamma();
+                yEst = self.neuralNetwork.getOutputs();
+                Gamma = self.neuralNetwork.filterLayer.getGamma();
                 
                 eTracking = yRef - yMes;
                 eIdentification = yMes - yEst;
                 
-                self.network.update(u, eIdentification)
+                self.neuralNetwork.update(u, eIdentification)
                 
-                self.controllers(1).updateMemory(eTracking(1))
-                self.controllers(2).updateMemory(eTracking(2))
-                self.controllers(1).autotune(eIdentification(1), Gamma(1))
-                self.controllers(2).autotune(eIdentification(2), Gamma(2))
+                self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
+                self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
                 self.controllers(1).evaluate()
                 self.controllers(2).evaluate()
                 
@@ -76,7 +122,11 @@ classdef IWIIRPID < Strategy
             end
         end
         
-        function saveResults(self)
+        function saveCSV(self)
+        end
+        
+        function charts(self)
+            self.neuralNetwork.charts()
         end
     end
     

@@ -1,13 +1,14 @@
 % This is the main class that calls the other classes and generates the simulations
 classdef Application < handle
     methods (Access = public)
-        %{
+        % The constructor of the Application class.
+        %
         %   @returns {object} self Instantiation of the class.
-        %}
+        %
         function self = Application()
             clc, close all, format short
             
-            % Load the packages            
+            % Load the packages
             addpath ('src/+packages/Controllers')
             addpath ('src/+packages/Graphics')
             addpath ('src/+packages/Networks')
@@ -17,33 +18,30 @@ classdef Application < handle
             addpath ('src/+packages/Repositories')
             addpath ('src/+packages/Strategies')
             addpath ('src/+packages/Tools')
+            addpath ('src/+packages/UnitTestings')
             
-            % The configuration values given by the user 
-            functionType = FunctionList.wavelet;
-            selection = WaveletList.morlet;
+            % Instance the algorithm
+            algorithm = Algorithm();
             
-            tFinal = 10;
-            period = 5e-3;
+            % Changes the algorithm to use.
+            %   NOTE: The user can implement new classes for new control strategies.
+            % SINTAX: algorithm.setAlgorithm(nameClass())
+            % algorithm.setAlgorithm(IWIIRPMR())
             
-            pitchReference = [-40 -20 -20 -20 0 0 10 10 0];
-            yawReference = [-20 -20 0 0 20 20 0 0];
-            initialPositions = [-40 0 0 0];
+            % Simulation setup
+            algorithm.setup()
             
-            inputs  = 2;
-            outputs = 2;
-            neurons = 3;
-            coeffsM = 5;
-            coeffsN = 4;
+            % Creates objects for model, controllers, neural networks, and trajectories
+            algorithm.builder()
             
-            % Instance the strategy, building its components and execute the algorithm.
-            context = Context();
+            % Executes the algorithm
+            algorithm.execute()
             
-            context.trajectoryBuilder(tFinal, period, pitchReference, yawReference)
-            context.modelBuilder(period, initialPositions)
-            context.controllerBuilder()
-            context.networkBuilder(functionType, selection, neurons, inputs, outputs, ...
-                coeffsM, coeffsN)
-            context.execute()
+            % Writes the simulations results to CSV files
+            algorithm.saveCSV()
+            
+            % Show the simulation results in graphs
+            algorithm.charts()
         end
     end
 end

@@ -3,7 +3,7 @@ classdef IFilter < handle
         feedbacks, feedforwards, oValues, persistentSignal {mustBeNumeric}
         iMemory, oMemory, Gamma, Phi, learningRates {mustBeNumeric}
         coeffsM, coeffsN, inputs, outputs {mustBeInteger}
-%         perfFeedbacks, perfFeedforwards, perfGamma, perfPhi, perfOutputs {mustBeNumeric}
+        perfFeedbacks, perfFeedforwards, perfGamma, perfPhi, perfOutputs {mustBeNumeric}
     end
     
     methods (Access = public)
@@ -47,33 +47,45 @@ classdef IFilter < handle
             self.feedforwards = self.feedforwards - self.learningRates(2).*feedforwards;
         end
         
-%         function initPerformanceArrays(self, samples)
-%             self.perfFeedbacks = zeros(samples, self.inputs * self.coeffsM);
-%             self.perfFeedforwards = zeros(samples, self.outputs * self.coeffsN);
-%             self.perfOutputs = zeros(samples, self.outputs);
-%             self.perfGamma = zeros(samples, self.outputs);
-%             self.perfPhi = zeros(samples, self.outputs);
-%         end
-%         
-%         function savePerformance(self, index)
-%             cols = 0:self.coeffsM:self.coeffsM*self.inputs;
-%             for item = 1:length(cols)-1
-%                 self.perfFeedbacks(index, cols(item)+1:cols(item+1)) = self.feedbacks(item,:);
-%             end
-%             
-%             cols = 0:self.coeffsN:self.coeffsN*self.outputs;
-%             for item = 1:length(cols)-1
-%                 self.perfFeedforwards(index, cols(item)+1:cols(item+1)) = self.feedforwards(item,:);
-%             end
-%         end
+        function initPerformance(self, samples)
+            self.perfFeedbacks = zeros(samples, self.inputs * self.coeffsM);
+            self.perfFeedforwards = zeros(samples, self.outputs * self.coeffsN);
+            self.perfOutputs = zeros(samples, self.outputs);
+            self.perfGamma = zeros(samples, self.outputs);
+            self.perfPhi = zeros(samples, self.outputs);
+        end
         
-%         function charts(self)
-%             self.plotCoefficientes(self.perfFeedbacks, self.inputs, self.coeffsM, ...
-%                 'Coeficientes de retardo', 'c');
-%             self.plotCoefficientes(self.perfFeedforwards, self.outputs, self.coeffsN, ...
-%                 'Coeficientes de adelanto', 'd');
-%         end
-
+        function setPerformance(self, iteration)
+            cols = 0:self.coeffsM:self.coeffsM*self.inputs;
+            for item = 1:length(cols)-1
+                self.perfFeedbacks(iteration, cols(item)+1:cols(item+1)) = self.feedbacks(item,:);
+            end
+            
+            cols = 0:self.coeffsN:self.coeffsN*self.outputs;
+            for item = 1:length(cols)-1
+                self.perfFeedforwards(iteration, cols(item)+1:cols(item+1)) = self.feedforwards(item,:);
+            end
+            
+            self.perfOutputs(iteration,:) = self.oValues;
+            self.perfGamma(iteration,:) = self.Gamma;
+            self.perfPhi(iteration,:) = self.Phi;
+        end
+        
+        function [perfFeedbacks, perfFeedforwards, perfGamma, perfPhi, perfOutputs] = ...
+                getPerformance(self)
+            perfFeedbacks = self.perfFeedbacks;
+            perfFeedforwards = self.perfFeedforwards;
+            perfGamma = self.perfGamma;
+            perfPhi = self.perfPhi;
+            perfOutputs = self.perfOutputs;
+        end
+        
+        function charts(self)
+            self.plotCoefficientes(self.perfFeedbacks, self.inputs, self.coeffsM, ...
+                'Feedbacks coefficients', 'c');
+            self.plotCoefficientes(self.perfFeedforwards, self.outputs, self.coeffsN, ...
+                'Feedforwards coefficients', 'd');
+        end
     end
     
     methods (Access = public)
@@ -97,6 +109,10 @@ classdef IFilter < handle
             feedforwards = self.feedforwards;
         end
         
+        function coeffsM = getCoeffsM(self)
+            coeffsM = self.coeffsM;
+        end
+        
         function outputs = getOutputs(self)
             outputs = self.oValues;
         end
@@ -118,17 +134,17 @@ classdef IFilter < handle
             self.oMemory = zeros(self.outputs, self.coeffsN);
         end
         
-%         function plotCoefficientes(~,array,cols,rows,title,tag)
-%             figure('Name',title,'NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
-%             
-%             for col = 1:cols
-%                 for row = 1:rows
-%                     subplot(rows, cols, col + cols*(row-1))
-%                         plot(array(:,row + (col-1)),'r','LineWidth',1)
-%                         ylabel(sprintf('%s_{%i,%i}', tag, col, row))
-%                 end
-%                 xlabel('Muestras, k')
-%             end
-%         end
+        function plotCoefficientes(~, array, cols, rows, title, tag)
+            figure('Name',title,'NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+            
+            for col = 1:cols
+                for row = 1:rows
+                    subplot(rows, cols, col + cols*(row-1))
+                        plot(array(:,row + (col-1)),'r','LineWidth',1)
+                        ylabel(sprintf('%s_{%i,%i}', tag, col, row))
+                end
+                xlabel('Muestras, k')
+            end
+        end
     end
 end
