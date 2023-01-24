@@ -9,24 +9,34 @@ classdef FunctionTestings < handle
         end
         
         function run(self)
-            neurons = 4;
-            type = FunctionList.window;
-            option = WindowList.hanning;
-            tFinal = 15;
+            neurons = 5;
+            tFinal = 30;
             period = 0.005;
             samples = round(tFinal/period);
+            type = FunctionList.wavelet;
+            option = WaveletList.rasp2;
+            learningRates = [0.1 0.1];
             
             self.instance = FunctionFactory.create(type, option, neurons);
-            self.instance.setLearningRates(rand(1,2))
+            self.instance.setLearningRates(learningRates)
             self.instance.initPerformance(samples)
+            self.instance.setScales(ones(1,neurons))
+            self.instance.setShifts(rand(1,neurons))
             
-            for i = 1:samples
-                self.instance.evaluate(i * 0.005)
-                self.instance.setPerformance(i)
-                self.instance.update(0.001*rand(1,neurons), 0.001*rand(1,neurons))
-            end
+            self.instance.getNeurons()
+            self.instance.getScales()
+            self.instance.getShifts()
+            self.instance.evaluate(period)
+            self.instance.getFuncOutput()
+            self.instance.getTau()
             
-            self.instance.charts()
+%             for i = 1:samples
+%                 self.instance.evaluate(i * period)
+%                 self.instance.setPerformance(i)
+%                 self.instance.update(rand(1,neurons), rand(1,neurons))
+%             end
+%             
+%             self.instance.charts()
         end
     end
 end

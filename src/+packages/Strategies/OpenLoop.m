@@ -1,28 +1,31 @@
 % This class that calls the other classes and generates the simulations
-classdef IWIIRPID < Strategy
+classdef OpenLoop < Strategy
+    properties (Access = protected)
+        PREFIX = 'OpenLoop';
+    end
+    
     properties (Access = private)
         tFinal, period {mustBeNumeric}
         plantType % {must be PlantList}
         controllerType % {must be ControllerTypes}
         references, controllerGains, controllerRates % {must be Structure}
         
-        nnaType % {must be NetworkList}
-        functionType % {must be FuntionList}
-        functionSelected % {must be WaveletList, WindowList or []}
-        amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
         learningRates, persistentSignal, initialStates {mustBeNumeric}
+        
+        controlSignals {mustBeNumeric}
+        fNormErrors {mustBeNumeric}
     end
     
     methods (Access = public)
         % Class constructor
-        function self = IWIIRPID()
+        function self = OpenLoop()
             return
         end
         
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 10;        % Simulation time [sec]
+            self.tFinal = 30;        % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -31,27 +34,14 @@ classdef IWIIRPID < Strategy
             
             % Trajectory parameters (positions in degrees)
             self.references = struct('pitch', [0 0 10 10 10 0 0], ...
-                                     'yaw', [0 0 -20 -20 0 0 20 10 10 0 0]);
-            
+                                     'yaw', [0 0 -20 -20 0 0]);
+                                 
             % Controller parameters
-            self.controllerType = ControllerTypes.PID;
-            self.controllerGains = struct('pitch', [10 .1 10], 'yaw', [.1 0 .1]);
-            self.controllerRates = struct('pitch', [0 0 0], 'yaw', [0 0 0]);
-            
-            % Wavenet-IIR parameters
-            self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.rasp2;
-            self.amountFunctions = 3;
-            
-            self.feedbacks = 4;
-            self.feedforwards = 5;
-            self.persistentSignal = 1e-3;
-            
-            self.nnaType = NetworkList.Wavenet;
-            self.inputs = 2;
-            self.outputs = 2;
-            
-            self.learningRates = [1e-18, 1e-18, 1e-18, 1e-18, 1e-18];
+            self.controllerType = ControllerTypes.ClassicalPID;
+            self.controllerGains = struct('pitch', [1 1 1 10 100 100], ...
+                                            'yaw', [1 1 1 10 100 100]);
+            self.controllerRates = struct('pitch', [1e-5 1e-5 1e-5 1e-5 1e-5 1e-5],...
+                                            'yaw', [1e-5 1e-5 1e-5 1e-5 1e-5 1e-5]);
         end
         
         % This funcion calls the class to generates the objects for the simulation.
@@ -82,19 +72,12 @@ classdef IWIIRPID < Strategy
             
             self.controllers = [pitchController, yawController];
             
-            % Building the Wavenet-IIR
-            self.neuralNetwork = NetworkFactory.create(self.nnaType);
-            self.neuralNetwork.buildNeuronLayer(self.functionType, ...
-                self.functionSelected, self.amountFunctions, self.inputs, self.outputs);
-            self.neuralNetwork.buildFilterLayer(self.inputs, self.feedbacks, ...
-                self.feedforwards, self.persistentSignal);
-            self.neuralNetwork.setLearningRates(self.learningRates);
-            self.neuralNetwork.initInternalMemory();
-            self.neuralNetwork.initPerformance(samples);
+            % Initialize the normalized error arrays
+            self.fNormErrors = zeros(samples,2);
         end
         
         % Executes the algorithm.
-        function execute(self)
+        function execute(self)            
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);
@@ -103,23 +86,18 @@ classdef IWIIRPID < Strategy
                 uy = self.controllers(2).getSignal();
                 u = [up uy];
                 
-                self.neuralNetwork.evaluate(kT, u)
-                
                 yMes = self.model.measured(u, iter);
-                yEst = self.neuralNetwork.getOutputs();
-                Gamma = self.neuralNetwork.filterLayer.getGamma();
+                yEst = [0 0];
                 
                 eTracking = yRef - yMes;
-                eIdentification = yMes - yEst;
+                eIdentification = ones(1,2);
                 
-                self.neuralNetwork.update(u, eIdentification)
+                self.controllers(1).autotune(eTracking(1))
+                self.controllers(2).autotune(eTracking(2))
                 
-                self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
-                self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
                 self.controllers(1).evaluate()
                 self.controllers(2).evaluate()
-
-                self.neuralNetwork.setPerformance(iter)
+                
                 self.controllers(1).setPerformance(iter)
                 self.controllers(2).setPerformance(iter)
                 
@@ -127,28 +105,54 @@ classdef IWIIRPID < Strategy
             end
         end
         
-        function saveCSV(self)
+        function saveCSV(~)
         end
         
         function charts(self)
-            self.neuralNetwork.charts()
+            self.identification();
             self.controllers(1).charts('Pitch controller')
             self.controllers(2).charts('Yaw controller')
         end
     end
     
-    methods (Access = protected)
+    methods (Access = protected)        
         % Display the algorithm behavior by means of the console messages.
         %
         %   @param {float} kT Instant of the time.
         %
-        function log(~, kT, reference, measured, estimated, tracking, identification, control)
+        function log(self, kT, reference, measured, estimated, tracking, identification, control)
             clc
-            fprintf(' :: PID CONTROLLER ::\n TIME >> %6.3f seconds \n', kT);
-            fprintf('PITCH >> yr = %+6.4f   ym = %+6.3f   ye = %+6.4f   et = %+6.4f   ei = %+6.4f   u = %+6.3f\n', ...
+            reference = rad2deg(reference);
+            measured = rad2deg(measured);
+            estimated = rad2deg(estimated);
+            tracking = rad2deg(tracking);
+            identification = rad2deg(identification);
+            
+            fprintf(' :: %s CONTROLLER ::\n TIME >> %6.3f seconds \n', self.PREFIX, kT);
+            fprintf('PITCH >> yRef = %+6.4f   yMes = %+6.3f   yEst = %+6.4f   eTrackig = %+6.4f   eIdentification = %+6.4f   ctrlSignal = %+6.3f\n', ...
                 reference(1), measured(1), estimated(1), tracking(1), identification(1), control(1))
-            fprintf('  YAW >> yr = %+6.4f   ym = %+6.3f   ye = %+6.4f   et = %+6.4f   ei = %+6.4f   u = %+6.3f\n', ...
+            fprintf('  YAW >> yRef = %+6.4f   yMes = %+6.3f   yEst = %+6.4f   eTrackig = %+6.4f   eIdentification = %+6.4f   ctrlSignal = %+6.3f\n', ...
                 reference(2), measured(2), estimated(2), tracking(2), identification(2), control(2))
+        end
+        
+        function identification(self)
+            figure('Name','Identification process','NumberTitle','off','units','normalized',...
+                'outerposition',[0 0 1 1]);
+            
+            tag = {'Pitch'; 'Yaw'};
+            samples = self.trajectories.getSamples();
+            rows = 1;
+            cols = 2;
+            
+            for item = 1:cols
+                subplot(rows, cols, item)
+                hold on
+                plot(rad2deg(self.trajectories.getTrajectory(item)),'k--','LineWidth',1)
+                plot(rad2deg(self.model.reads(item)),'r','LineWidth',1)
+                legend('Reference','Measured')
+                ylabel(sprintf('%s', string(tag(item))))
+                xlim([1 samples])
+            end
         end
     end
 end

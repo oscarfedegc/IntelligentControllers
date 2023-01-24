@@ -14,6 +14,8 @@ classdef ControllerFactory
                     product = IPIDController();
                 case ControllerTypes.PMR
                     product = IPMRController();
+                case ControllerTypes.ClassicalPID
+                    product = IPMRStatic();
             end
         end
     end

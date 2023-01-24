@@ -4,5 +4,6 @@ classdef ControllerTypes
     enumeration
         PID % Proportional, Integral and Derivative
         PMR % Proportional multiresolution
+        ClassicalPID
     end
 end

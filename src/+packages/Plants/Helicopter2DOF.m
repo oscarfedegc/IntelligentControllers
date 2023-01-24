@@ -13,6 +13,10 @@ classdef Helicopter2DOF < Plant
             self.nonlinear(inputs, iter);
             position = [self.states(iter,1) self.states(iter,3)];
         end
+        
+        function order = getOrder(self)
+            order = self.ORDER;
+        end
     end
     
     methods (Access = protected)
@@ -55,8 +59,10 @@ classdef Helicopter2DOF < Plant
             self.states(iter + 1,:) = self.states(iter,:) + self.period*xdot';
             
             % Approximation -- Gamma and Rho
-            Rho = self.states(iter,:) + f'*self.period;    Rho = Rho(1:2);
-            Gamma = (g*self.period*u)';                  Gamma = Gamma(1:2);
+            Rho = self.states(iter,:) + f'*self.period;
+            Rho = Rho(1:2);
+            Gamma = (g*self.period*u)';
+            Gamma = Gamma(1:2);
             
             self.approximation(iter,:) = [Rho, Gamma];
         end

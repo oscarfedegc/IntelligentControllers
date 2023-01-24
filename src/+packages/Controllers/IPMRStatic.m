@@ -1,6 +1,6 @@
 % This class implements the PMR Controller and its methods to calculate the
 % control signal and autotune its gains.
-classdef IPMRController < Controller
+classdef IPMRStatic < Controller
     properties (Access = private)
         level, errorSignals, errorSamples {mustBeNumeric}
     end
@@ -10,7 +10,7 @@ classdef IPMRController < Controller
         %
         %   @returns {object} self Is the instantiated object.
         %
-        function self = IPMRController()
+        function self = IPMRStatic()
             self.signal = 0;
             self.level = 2;
             self.gains = rand(1,3);
@@ -48,15 +48,15 @@ classdef IPMRController < Controller
         %   @param {float} gamma Represents a wavenet parameter.
         %   @param {float} period Sampling period of the plant.
         %
-        function autotune(self, trackingError, gamma)
+        function autotune(self, trackingError)
             self.updateMemory(trackingError);
             
             deltaGains = zeros(1, self.level + 1);
             epsilon = self.eTrackingMemory;
             mu = self.updateRates;
             
-            for i = 1:self.level
-                deltaGains(i) = gamma * mu(i) * (epsilon(1,i) - epsilon(2,i));
+            for i = 1:self.level + 1
+                deltaGains(i) = mu(i) * (epsilon(1,i) - epsilon(2,i));
             end
             
             self.gains = self.gains + deltaGains;
@@ -79,7 +79,7 @@ classdef IPMRController < Controller
         %   @param {object} self Stands for instantiated object from this class.
         %
         function evaluate(self)
-            self.signal = self.signal + sum(self.gains.*self.eTrackingMemory(1,:));
+            self.signal = sum(self.gains.*self.eTrackingMemory(1,:));
         end
         
         % Shows the behavior of the gains and the control signal by means of a graph.

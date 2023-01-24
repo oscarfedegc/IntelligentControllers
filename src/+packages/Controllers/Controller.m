@@ -10,6 +10,7 @@ classdef Controller < handle
     % Theses functions must be implemented in all inherited classes, and have
     % to be called in the following order.
     methods (Abstract)
+        setGains();
         evaluate();
         autotune();
         updateMemory();
@@ -18,10 +19,6 @@ classdef Controller < handle
     
     methods (Access = public)
         % Theses functions are the getters and setter to access the protected properties.
-        function setGains(self, gains)
-            self.gains = gains;
-        end
-        
         function gains = getGains(self)
             gains = self.gains;
         end

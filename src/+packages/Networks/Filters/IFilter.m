@@ -1,9 +1,9 @@
 classdef IFilter < handle
     properties (Access = public)
         feedbacks, feedforwards, oValues, persistentSignal {mustBeNumeric}
-        iMemory, oMemory, Gamma, Phi, learningRates {mustBeNumeric}
+        iMemory, oMemory, Gamma, Rho, learningRates {mustBeNumeric}
         coeffsM, coeffsN, inputs, outputs {mustBeInteger}
-        perfFeedbacks, perfFeedforwards, perfGamma, perfPhi, perfOutputs {mustBeNumeric}
+        perfFeedbacks, perfFeedforwards, perfGamma, perfRho, perfOutputs {mustBeNumeric}
     end
     
     methods (Access = public)
@@ -29,7 +29,7 @@ classdef IFilter < handle
             rho = (diag(self.feedforwards * self.oMemory') .* self.persistentSignal)';
             
             self.Gamma = gamma;
-            self.Phi = rho;
+            self.Rho = rho;
             self.oValues = gamma + rho;
             self.updateOMemory(self.oValues);
         end
@@ -52,7 +52,7 @@ classdef IFilter < handle
             self.perfFeedforwards = zeros(samples, self.outputs * self.coeffsN);
             self.perfOutputs = zeros(samples, self.outputs);
             self.perfGamma = zeros(samples, self.outputs);
-            self.perfPhi = zeros(samples, self.outputs);
+            self.perfRho = zeros(samples, self.outputs);
         end
         
         function setPerformance(self, iteration)
@@ -68,16 +68,25 @@ classdef IFilter < handle
             
             self.perfOutputs(iteration,:) = self.oValues;
             self.perfGamma(iteration,:) = self.Gamma;
-            self.perfPhi(iteration,:) = self.Phi;
+            self.perfRho(iteration,:) = self.Rho;
         end
         
-        function [perfFeedbacks, perfFeedforwards, perfGamma, perfPhi, perfOutputs] = ...
+        function [perfFeedbacks, perfFeedforwards, perfGamma, perfRho, perfOutputs] = ...
                 getPerformance(self)
             perfFeedbacks = self.perfFeedbacks;
             perfFeedforwards = self.perfFeedforwards;
             perfGamma = self.perfGamma;
-            perfPhi = self.perfPhi;
+            perfRho = self.perfRho;
             perfOutputs = self.perfOutputs;
+        end
+        
+        function perfOutputs = getPerformanceOutputs(self)
+            perfOutputs = self.perfOutputs;
+        end
+        
+        function [perfRho, perfGamma] = getApproximation(self)
+            perfRho = self.Rho;
+            perfGamma = self.Gamma;
         end
         
         function charts(self)
@@ -121,8 +130,8 @@ classdef IFilter < handle
             gamma = self.Gamma;
         end
         
-        function phi = getPhi(self)
-            phi = self.Phi;
+        function Rho = getRho(self)
+            Rho = self.Rho;
         end
     end
     

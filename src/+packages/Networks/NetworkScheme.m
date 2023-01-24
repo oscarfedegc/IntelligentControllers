@@ -48,6 +48,14 @@ classdef NetworkScheme < handle
             outputs = self.filterOutputLayer;
         end
         
+        function outputs = getBehaviorOutputs(self)
+            outputs = self.filterLayer.getPerformanceOutputs();
+        end
+        
+        function [Gamma, Rho] = getApproximation(self)
+            [Gamma, Rho] = self.filterLayer.getApproximation();
+        end
+        
         function initPerformance(self, samples)
             self.perfSynapticWeights = zeros(samples, self.outputs * self.hiddenNeuronLayer.getNeurons());
             self.hiddenNeuronLayer.initPerformance(samples);
