@@ -48,15 +48,15 @@ classdef IPMRController < Controller
         %   @param {float} gamma Represents a wavenet parameter.
         %   @param {float} period Sampling period of the plant.
         %
-        function autotune(self, trackingError, gamma)
+        function autotune(self, trackingError, identError, gamma)
             self.updateMemory(trackingError);
             
             deltaGains = zeros(1, self.level + 1);
             epsilon = self.eTrackingMemory;
             mu = self.updateRates;
             
-            for i = 1:self.level
-                deltaGains(i) = gamma * mu(i) * (epsilon(1,i) - epsilon(2,i));
+            for i = 1:self.level + 1
+                deltaGains(i) = mu(i) * gamma * (epsilon(1,i) - epsilon(2,i));
             end
             
             self.gains = self.gains + deltaGains;
@@ -70,8 +70,7 @@ classdef IPMRController < Controller
         %
         function updateMemory(self, trackingError)
             self.errorSignals = [trackingError, self.errorSignals(1:self.errorSamples-1)];
-            descomposition = self.descomposition(self.errorSignals);
-            self.eTrackingMemory = [descomposition; self.eTrackingMemory(1,:)];
+            self.descomposition(self.errorSignals);
         end
         
         % This function is in charge of calculate the control signal.
@@ -79,7 +78,8 @@ classdef IPMRController < Controller
         %   @param {object} self Stands for instantiated object from this class.
         %
         function evaluate(self)
-            self.signal = self.signal + sum(self.gains.*self.eTrackingMemory(1,:));
+            epsilon = self.eTrackingMemory(1,:) - self.eTrackingMemory(2,:);
+            self.signal = self.signal + sum(self.gains.*epsilon);
         end
         
         % Shows the behavior of the gains and the control signal by means of a graph.
@@ -111,20 +111,20 @@ classdef IPMRController < Controller
         %   @param {object} self
         %   @param {float[]} errorSignal The tracking error from the
         %                                current until (k-N) periods.
-        %   @return {float[]} output Is the descomposed signal.
         %
-        function output = descomposition(self, errorSignal)
-            output = zeros(self.level + 1, self.errorSamples);
+        function descomposition(self, errorSignal)
+            output = zeros(self.errorSamples, self.level + 1);
+            rows = self.errorSamples - 1 : 1 : self.errorSamples;
             
             [C,L] = wavedec(errorSignal, self.level, 'db2');
             
-            output(1,:) = wrcoef('a', C, L, 'db2', self.level);
+            output(:,1) = wrcoef('a', C, L, 'db2', self.level);
             
             for i = 2:self.level + 1
-                output(i,:) = wrcoef('d', C, L, 'db2', i-1);
+                output(:,i) = wrcoef('d', C, L, 'db2', i-1);
             end
             
-            output = output(:,1)';
+            self.eTrackingMemory = output(rows,:);
         end
     end
 end
