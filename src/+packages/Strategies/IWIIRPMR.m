@@ -36,15 +36,15 @@ classdef IWIIRPMR < Strategy
             self.initialStates = [-40 0 0 0];
             
             % Trajectory parameters (positions in degrees)
-            self.references = struct('pitch', [0 0  10 50 10 0 0], ...
-                                     'yaw', [0 0 40 40 -120 -20 40 0 0]);
+            self.references = struct('pitch', [-40 0 0 0 0 0 0], ...
+                                     'yaw', [0 30 30 30 30 30]);
             
             % Controller parameters
             self.controllerType = ControllerTypes.PMR;
-            self.controllerGains = struct('pitch', [10 10 10 1 1], ...
-                                            'yaw', [1 10 1 10 1]);
-            self.controllerRates = struct('pitch', [1e-3 1e-5 1e-1 1e-1 1e-2],...
-                                            'yaw', [1e-3 1e-5 1e-1 1e-1 1e-2]);
+            self.controllerGains = struct('pitch', [100 100 100 100 10 10], ...
+                                            'yaw', [10 10 100 100 10 10]);
+            self.controllerRates = struct('pitch', [1e-3 1e-3 1e-3 1e-3 1e-3 1e-3],...
+                                            'yaw', [1e-3 1e-3 1e-3 1e-3 1e-3 1e-3]);
             
             % Wavenet-IIR parameters
             self.functionType = FunctionList.wavelet;
@@ -53,13 +53,13 @@ classdef IWIIRPMR < Strategy
             
             self.feedbacks = 4;
             self.feedforwards = 6;
-            self.persistentSignal = 1e-1;
+            self.persistentSignal = 1e-2;
             
             self.nnaType = NetworkList.Wavenet;
             self.inputs = 2;
             self.outputs = 2;
             
-            self.learningRates = [1e-8 1e-10 1e-10 1e-10 5e-6];
+            self.learningRates = [1e-8 1e-10 1e-10 1e-10 5e-4];
         end
         
         % This funcion calls the class to generates the objects for the simulation.
@@ -144,7 +144,7 @@ classdef IWIIRPMR < Strategy
         end
         
         function charts(self)
-%             self.neuralNetwork.charts()
+            self.neuralNetwork.charts()
             self.controllers(1).charts('Pitch controller')
             self.controllers(2).charts('Yaw controller')
             self.plotting(self.fNormApprox);

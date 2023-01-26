@@ -54,6 +54,10 @@ classdef ITrajectory < handle
         function rst = getInstants(self)
             rst = self.instants;
         end
+
+        function references = getAllReferences(self)
+            references = self.positions;
+        end
         
         function positions = getReferences(self, iter)
             positions = self.positions(iter,:);

@@ -11,12 +11,12 @@ function Descomposition
     x = x(1:samples);
     t = t(1:samples);
     
-    [C,L] = wavedec(x,level,'db2');
+    [C,L] = wavedec(x,level,'db4')
     
-    ex5H = wrcoef('a', C, L, 'db2', level)
-    ex1L = wrcoef('d', C, L, 'db2', 1)
-    ex2L = wrcoef('d', C, L, 'db2', 2)
-    ex3L = wrcoef('d', C, L, 'db2', 3)
+    ex5H = wrcoef('a', C, L, 'db4', level)
+    ex1L = wrcoef('d', C, L, 'db4', 1)
+    ex2L = wrcoef('d', C, L, 'db4', 2)
+    ex3L = wrcoef('d', C, L, 'db4', 3)
     
     plot(t,x)
     legend('Original')

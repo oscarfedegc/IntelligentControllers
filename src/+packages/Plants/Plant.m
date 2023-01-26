@@ -19,6 +19,11 @@ classdef Plant < handle
         function positions = reads(self, degree)
             positions = self.states(:,degree);
         end
+
+        function positions = getPerformance(self)
+            n = length(self.states(:,1)) - 1;
+            positions = self.states(1:n,[1,3]);
+        end
         
         function setPeriod(self, period)
             self.period = period;

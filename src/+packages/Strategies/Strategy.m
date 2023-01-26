@@ -36,27 +36,43 @@ classdef Strategy < handle
             lbl = {'theta'; 'phi'};
             sub = {'Gamma', 'Phi'};
             samples = self.trajectories.getSamples();
-            identification = self.neuralNetwork.getBehaviorOutputs();
+            references = rad2deg(self.trajectories.getAllReferences());
+            measurement = rad2deg(self.model.getPerformance());
+            approximation = rad2deg(self.neuralNetwork.getBehaviorOutputs());
+            trackingError = references - measurement;
+            identifError = measurement - approximation;
             rows = 3;
-            cols = 2;
+            cols = length(references(1,:));
             
             for item = 1:cols
                 subplot(rows, cols, item)
+                yyaxis left
                 hold on
-                plot(rad2deg(self.trajectories.getTrajectory(item)),'k--','LineWidth',1)
-                plot(rad2deg(self.model.reads(item)),'r','LineWidth',1)
-                legend('Reference','Measured')
-                ylabel(sprintf('%s, \\%s', string(tag(item)), string(lbl(item))))
+                plot(references(:,item),'k--','LineWidth',1)
+                plot(measurement(:,item),'b:','LineWidth',1)
+                ylabel(sprintf('%s (y_{r_\\%s}, y_\\%s)', string(tag(item)), string(lbl(item)), string(lbl(item))))
+                yyaxis right
+                plot(trackingError(:,item),'r-.','LineWidth',1)
+                ylabel(sprintf('\\epsilon_\\%s', string(lbl(item))))
+                legend(sprintf('Reference, y_{r_\\%s}', string(lbl(item))), ...
+                    sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
+                    sprintf('Tracking error, \\epsilon_{\\%s}', string(lbl(item))))
                 xlim([1 samples])
             end
             
             for item = 1:cols
                 subplot(rows, cols, item + cols)
+                yyaxis left
                 hold on
-                plot(rad2deg(self.model.reads(item)),'k-.','LineWidth',1)
-                plot(identification(:,item),'r','LineWidth',1)
-                legend('Measured','Estimated')
-                ylabel(sprintf('%s, \\%s', string(tag(item)), string(lbl(item))))
+                plot(measurement(:,item),'b:','LineWidth',1)
+                plot(approximation(:,item),'k--','LineWidth',1)
+                ylabel(sprintf('%s (y_{\\%s}, y_\\%s^\\Gamma)', string(tag(item)), string(lbl(item)), string(lbl(item))))
+                yyaxis right
+                plot(identifError(:,item),'r-.','LineWidth',1)
+                ylabel(sprintf('e_\\%s', string(lbl(item))))
+                legend(sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
+                    sprintf('Approximation, y_{\\%s}^\\Gamma', string(lbl(item))), ...
+                    sprintf('Identification error, e_{\\%s}', string(lbl(item))))
                 xlim([1 samples])
             end
             
