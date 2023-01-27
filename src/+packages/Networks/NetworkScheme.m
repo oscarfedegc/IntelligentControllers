@@ -13,6 +13,8 @@ classdef NetworkScheme < handle
         update();
         getGamma();
         plotSynapticWeights();
+        initBehavior();
+        setBehavior();
     end
     
     methods (Access = public)
@@ -28,6 +30,10 @@ classdef NetworkScheme < handle
         
         function setSynapticWeights(self, weights)
             self.synapticWeights = weights;
+        end
+        
+        function weights = getSynapticWeights(self)
+            weights = self.synapticWeights;
         end
         
         function setLearningRates(self, rates)
@@ -60,6 +66,7 @@ classdef NetworkScheme < handle
             self.perfSynapticWeights = zeros(samples, self.outputs * self.hiddenNeuronLayer.getNeurons());
             self.hiddenNeuronLayer.initPerformance(samples);
             self.filterLayer.initPerformance(samples);
+            self.initBehavior(samples);
         end
         
         function setPerformance(self, iteration)
@@ -69,6 +76,7 @@ classdef NetworkScheme < handle
             end
             self.hiddenNeuronLayer.setPerformance(iteration);
             self.filterLayer.setPerformance(iteration);
+            self.setBehavior(iteration);
         end
         
         function buildNeuronLayer(self, functionType, functionSelected, neurons, inputs, outputs)

@@ -1,5 +1,9 @@
 % This class that calls the other classes and generates the simulations
-classdef IWIIRPID < Strategy
+classdef IRLIIRPID < Strategy
+    properties (Access = protected)
+        PREFIX = 'RL-IIR PID';
+    end
+    
     properties (Access = private)
         tFinal, period {mustBeNumeric}
         plantType % {must be PlantList}
@@ -11,11 +15,13 @@ classdef IWIIRPID < Strategy
         functionSelected % {must be WaveletList, WindowList or []}
         amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
         learningRates, persistentSignal, initialStates {mustBeNumeric}
+        
+        fNormApprox, fNormErrors {mustBeNumeric}
     end
     
     methods (Access = public)
         % Class constructor
-        function self = IWIIRPID()
+        function self = IRLIIRPID()
             return
         end
         
@@ -30,28 +36,30 @@ classdef IWIIRPID < Strategy
             self.initialStates = [-40 0 0 0];
             
             % Trajectory parameters (positions in degrees)
-            self.references = struct('pitch', [0 0 10 10 10 0 0], ...
-                                     'yaw', [0 0 -20 -20 0 0 20 10 10 0 0]);
+            self.references = struct('pitch', [-40 -40 -20 -20 0 0 0 0], ...
+                                     'yaw', [0 30 -30 -30 0 0]);
             
             % Controller parameters
-            self.controllerType = ControllerTypes.PID;
-            self.controllerGains = struct('pitch', [10 .1 10], 'yaw', [.1 0 .1]);
-            self.controllerRates = struct('pitch', [0 0 0], 'yaw', [0 0 0]);
+            self.controllerType = ControllerTypes.WavenetPMR;
+            self.controllerGains = struct('pitch', [1 1 1], ...
+                                            'yaw', [1 1 1]);
+            self.controllerRates = struct('pitch', [1e-1 1e-1 1e-1],...
+                                            'yaw', [1e-1 1e-1 1e-1]);
             
             % Wavenet-IIR parameters
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.rasp2;
+            self.functionSelected = WaveletList.rasp1;
             self.amountFunctions = 3;
             
-            self.feedbacks = 4;
-            self.feedforwards = 5;
-            self.persistentSignal = 1e-3;
+            self.feedbacks = 5;
+            self.feedforwards = 4;
+            self.persistentSignal = 3.36e-2;
             
-            self.nnaType = NetworkList.Wavenet;
-            self.inputs = 2;
-            self.outputs = 2;
+            self.nnaType = NetworkList.ActorCritic;
+            self.inputs = 3;
+            self.outputs = 3;
             
-            self.learningRates = [1e-18, 1e-18, 1e-18, 1e-18, 1e-18];
+            self.learningRates = [3e-8 3e-8 3e-8 5e-8 5e-5];
         end
         
         % This funcion calls the class to generates the objects for the simulation.
@@ -63,6 +71,9 @@ classdef IWIIRPID < Strategy
             
             % Bulding the plant
             samples = self.trajectories.getSamples();
+            
+            self.fNormApprox = zeros(samples, 2);
+            self.fNormErrors = zeros(samples, 2);
             
             self.model = PlantFactory.create(self.plantType);
             self.model.setPeriod(self.period);
@@ -94,7 +105,7 @@ classdef IWIIRPID < Strategy
         end
         
         % Executes the algorithm.
-        function execute(self)
+        function execute(self)            
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);
@@ -105,35 +116,41 @@ classdef IWIIRPID < Strategy
                 
                 self.neuralNetwork.evaluate(kT, u)
                 
-                yMes = self.model.measured(u, iter);
-                yEst = self.neuralNetwork.getOutputs();
-                Gamma = self.neuralNetwork.filterLayer.getGamma();
-                
-                eTracking = yRef - yMes;
-                eIdentification = yMes - yEst;
-                
-                self.neuralNetwork.update(u, eIdentification)
-                
-                self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
-                self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
-                self.controllers(1).evaluate()
-                self.controllers(2).evaluate()
-
-                self.neuralNetwork.setPerformance(iter)
-                self.controllers(1).setPerformance(iter)
-                self.controllers(2).setPerformance(iter)
-                
-                self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u)
+%                 yMes = self.model.measured(u, iter);
+%                 
+%                 netOutputs = self.neuralNetwork.getOutputs();
+%                 yEst = netOutputs(1:self.outputs-1);
+%                 criticOutput = netOutputs(self.outputs-1);
+%                 Gamma = self.neuralNetwork.filterLayer.getGamma();
+%                 Gamma = Gamma(1:self.outputs-1);
+%                 
+%                 eTracking = yRef - yMes;
+%                 eIdentification = yMes - yEst;
+%                 
+%                 self.fNormApprox = self.setNormError(self.fNormApprox, iter);
+%                 
+% %                 self.neuralNetwork.update(u, eIdentification)
+%                 
+%                 self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
+%                 self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
+%                 self.controllers(1).evaluate()
+%                 self.controllers(2).evaluate()
+%                 
+%                 self.neuralNetwork.setPerformance(iter)
+%                 self.controllers(1).setPerformance(iter)
+%                 self.controllers(2).setPerformance(iter)
+%                 
+%                 self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u, Gamma)
             end
         end
         
-        function saveCSV(self)
+        function saveCSV(~)
         end
         
         function charts(self)
-            self.neuralNetwork.charts()
-            self.controllers(1).charts('Pitch controller')
-            self.controllers(2).charts('Yaw controller')
+%             self.neuralNetwork.charts()
+%             self.controllers(1).charts('Pitch controller')
+%             self.controllers(2).charts('Yaw controller')
             self.plotting(self.fNormApprox);
         end
     end
@@ -143,13 +160,19 @@ classdef IWIIRPID < Strategy
         %
         %   @param {float} kT Instant of the time.
         %
-        function log(~, kT, reference, measured, estimated, tracking, identification, control)
-            clc
-            fprintf(' :: PID CONTROLLER ::\n TIME >> %6.3f seconds \n', kT);
-            fprintf('PITCH >> yr = %+6.4f   ym = %+6.3f   ye = %+6.4f   et = %+6.4f   ei = %+6.4f   u = %+6.3f\n', ...
-                reference(1), measured(1), estimated(1), tracking(1), identification(1), control(1))
-            fprintf('  YAW >> yr = %+6.4f   ym = %+6.3f   ye = %+6.4f   et = %+6.4f   ei = %+6.4f   u = %+6.3f\n', ...
-                reference(2), measured(2), estimated(2), tracking(2), identification(2), control(2))
+        function log(self, kT, reference, measured, estimated, tracking, identification, control, gamma)
+            clc            
+            reference = rad2deg(reference);
+            measured = rad2deg(measured);
+            estimated = rad2deg(estimated);
+            tracking = rad2deg(tracking);
+            identification = rad2deg(identification);
+            
+            fprintf(' :: %s CONTROLLER ::\n TIME >> %6.3f seconds \n', self.PREFIX, kT);
+            fprintf('PITCH >> yRef = %+6.3f   yMes = %+6.3f   yEst = %+6.3f   eTck = %+6.3f   eIdf = %+6.3f   signal = %+6.3f   gamma = %+6.3f\n', ...
+                reference(1), measured(1), estimated(1), tracking(1), identification(1), control(1), gamma(1))
+            fprintf('  YAW >> yRef = %+6.3f   yMes = %+6.3f   yEst = %+6.3f   eTck = %+6.3f   eIdf = %+6.3f   signal = %+6.3f   gamma = %+6.3f\n', ...
+                reference(2), measured(2), estimated(2), tracking(2), identification(2), control(2), gamma(2))
         end
     end
 end

@@ -36,19 +36,19 @@ classdef IWIIRPMR < Strategy
             self.initialStates = [-40 0 0 0];
             
             % Trajectory parameters (positions in degrees)
-            self.references = struct('pitch', [-40 0 0 0 0 0 0], ...
-                                     'yaw', [0 30 30 30 30 30]);
+            self.references = struct('pitch', [-40 -40 -20 -20 0 0 0 0], ...
+                                     'yaw', [0 30 -30 -30 0 0]);
             
             % Controller parameters
-            self.controllerType = ControllerTypes.PMR;
-            self.controllerGains = struct('pitch', [100 100 100 100 10 10], ...
-                                            'yaw', [10 10 100 100 10 10]);
-            self.controllerRates = struct('pitch', [1e-3 1e-3 1e-3 1e-3 1e-3 1e-3],...
-                                            'yaw', [1e-3 1e-3 1e-3 1e-3 1e-3 1e-3]);
+            self.controllerType = ControllerTypes.WavenetPMR;
+            self.controllerGains = struct('pitch', [750 0 0 0 0 200], ...
+                                            'yaw', [500 0 0 0 0 100]);
+            self.controllerRates = struct('pitch', [1e-1 1e-1 1e-1 1e-1 1e-1 1e-1],...
+                                            'yaw', [1e-1 1e-1 1e-1 1e-1 1e-1 1e-1]);
             
             % Wavenet-IIR parameters
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.rasp2;
+            self.functionSelected = WaveletList.shannon;
             self.amountFunctions = 9;
             
             self.feedbacks = 4;
@@ -59,7 +59,7 @@ classdef IWIIRPMR < Strategy
             self.inputs = 2;
             self.outputs = 2;
             
-            self.learningRates = [1e-8 1e-10 1e-10 1e-10 5e-4];
+            self.learningRates = [1e-10 1e-10 1e-10 1e-10 1e-5];
         end
         
         % This funcion calls the class to generates the objects for the simulation.

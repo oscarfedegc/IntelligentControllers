@@ -1,10 +1,11 @@
-classdef IWavenetScheme < NetworkScheme
+classdef IActorCriticScheme < NetworkScheme
     properties (Access = public)
-        functionMemory, derivativeMemory {mustBeNumeric}
+        functionMemory, derivativeMemory, errorTD, rewardSignal, criticOutput {mustBeNumeric}
+        perfErrorTD, perfRewardSignal, perfCriticOutput, actorOutputs {mustBeNumeric}
     end
     
     methods (Access = public)
-        function self = IWavenetScheme()
+        function self = IActorCriticScheme()
             return
         end
         
@@ -19,11 +20,19 @@ classdef IWavenetScheme < NetworkScheme
         end
         
         function evaluate(self, instant, inputs)
+            items = self.outputs;
+            
             self.setInputs(inputs);
-            self.hiddenNeuronLayer.evaluate(instant);
-            self.setNetworkOutputs(sum(inputs) * self.hiddenNeuronLayer.getFuncOutput() * self.synapticWeights');
-            self.filterLayer.evaluate(self.getNetworkOutputs());
-            self.setOutputs(self.filterLayer.getOutputs());
+            self.hiddenNeuronLayer.evaluate(instant)
+            
+            networkOutputs = sum(inputs) * self.hiddenNeuronLayer.getFuncOutput() * self.getSynapticWeights();
+            self.filterLayer.evaluate(self.getNetworkOutputs())
+            filterOutputs = self.filterLayer.getOutputs();
+            
+            self.actorOutputs = filterOutputs(1:items-1);
+            self.criticOutput = networkOutputs(items);
+            
+            self.setOutputs([self.actorOutputs self.criticOutputs]);
             self.updateInternalMemory();
         end
         
@@ -39,6 +48,14 @@ classdef IWavenetScheme < NetworkScheme
         
         function gamma = getGamma(self)
             gamma = self.filterLayer.getGamma();
+        end
+        
+        function output = getCriticOutput(self)
+            output = self.criticOutput;
+        end
+        
+        function outputs = getActorOutputs(self)
+            outputs = self.actorOutputs;
         end
         
         function plotSynapticWeights(self)
@@ -74,6 +91,12 @@ classdef IWavenetScheme < NetworkScheme
     methods (Access = protected)
         function rst = getCostFunction(~,error)
             rst = 0.5 * sum(error .^ 2);
+        end
+        
+        function calculateRewardSignal(~)
+        end
+        
+        function calculateTemporalDifference(~)
         end
         
         function output = updateMatrix(~, matrix, newValues)

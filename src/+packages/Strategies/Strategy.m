@@ -24,6 +24,11 @@ classdef Strategy < handle
         function fNormErrors = setNormError(self, fNormErrors, iter)
             [Rho, Gamma] = self.model.getApproximation();
             [RhoIIR, GammaIIR] = self.neuralNetwork.getApproximation();
+            
+            order = length(Rho);
+            
+            RhoIIR = RhoIIR(1:order);
+            GammaIIR = GammaIIR(1:order);
                 
             fNormErrors(iter,:) = [norm(Gamma-GammaIIR), norm(Rho-RhoIIR)];
         end

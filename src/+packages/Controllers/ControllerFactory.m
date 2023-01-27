@@ -10,12 +10,12 @@ classdef ControllerFactory
         %
         function product = create(controllerType)
             switch controllerType
-                case ControllerTypes.PID
-                    product = IPIDController();
-                case ControllerTypes.PMR
-                    product = IPMRController();
+                case ControllerTypes.WavenetPID
+                    product = IWavenetPID();
+                case ControllerTypes.WavenetPMR
+                    product = IWavenetPMR();
                 case ControllerTypes.ClassicalPID
-                    product = IPMRStatic();
+                    product = IClassicalPID();
             end
         end
     end

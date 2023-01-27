@@ -135,7 +135,7 @@ classdef IFilter < handle
         end
     end
     
-    methods (Access = protected)
+    methods (Access = protected)        
         function generate(self)
             self.feedbacks = rand(self.inputs, self.coeffsM);
             self.feedforwards = rand(self.outputs, self.coeffsN);

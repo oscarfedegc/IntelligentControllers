@@ -1,6 +1,6 @@
 % This class implements the PMR Controller and its methods to calculate the
 % control signal and autotune its gains.
-classdef IPMRStatic < Controller
+classdef IWavenetPMR < Controller
     properties (Access = private)
         level, errorSignals, errorSamples {mustBeNumeric}
     end
@@ -10,7 +10,7 @@ classdef IPMRStatic < Controller
         %
         %   @returns {object} self Is the instantiated object.
         %
-        function self = IPMRStatic()
+        function self = IWavenetPMR()
             self.signal = 0;
             self.level = 2;
             self.gains = rand(1,3);
@@ -48,7 +48,7 @@ classdef IPMRStatic < Controller
         %   @param {float} gamma Represents a wavenet parameter.
         %   @param {float} period Sampling period of the plant.
         %
-        function autotune(self, trackingError)
+        function autotune(self, trackingError, identError, gamma)
             self.updateMemory(trackingError);
             
             deltaGains = zeros(1, self.level + 1);
@@ -56,7 +56,7 @@ classdef IPMRStatic < Controller
             mu = self.updateRates;
             
             for i = 1:self.level + 1
-                deltaGains(i) = mu(i) * (epsilon(1,i) - epsilon(2,i));
+                deltaGains(i) = mu(i) * gamma * identError * (epsilon(1,i) - epsilon(2,i));
             end
             
             self.gains = self.gains + deltaGains;
@@ -114,6 +114,7 @@ classdef IPMRStatic < Controller
         %
         function descomposition(self, errorSignal)
             output = zeros(self.errorSamples, self.level + 1);
+            rows = self.errorSamples - 1 : 1 : self.errorSamples;
             
             [C,L] = wavedec(errorSignal, self.level, 'db2');
             
@@ -123,7 +124,7 @@ classdef IPMRStatic < Controller
                 output(:,i) = wrcoef('d', C, L, 'db2', i-1);
             end
             
-            self.eTrackingMemory = output(1:2,:);
+            self.eTrackingMemory = output(rows,:);
         end
     end
 end
