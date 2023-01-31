@@ -13,7 +13,7 @@ classdef IWIIRPMR < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 60; % Simulation time [sec]
+            self.tFinal = 10; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -35,7 +35,7 @@ classdef IWIIRPMR < Strategy
             
             % Wavenet-IIR parameters
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.morlet;
+            self.functionSelected = WaveletList.shannon;
             self.amountFunctions = 3;
             
             self.feedbacks = 4;

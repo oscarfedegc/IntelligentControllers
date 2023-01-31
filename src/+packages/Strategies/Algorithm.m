@@ -1,7 +1,7 @@
 % This class calls the functions from a specific control strategy.
 classdef Algorithm < handle
     properties (Access = protected)
-        algorithm = IWIIRPID(); % Default control 
+        algorithm = IWIIRPMR(); % Default control 
     end
     
     methods (Access = public)
