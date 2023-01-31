@@ -92,16 +92,18 @@ classdef IWavenetPMR < Controller
                 'outerposition',[0 0 1 1]);
             
             items = length(self.performance(1,:));
-            for row = 1:items - 1
+            
+            subplot(items, 1, 1)
+                plot(self.performance(:,1),'r','LineWidth',1)
+                ylabel('Control signal, u [V]')
+                
+            for row = 2:items
                 subplot(items, 1, row)
                 plot(self.performance(:,row),'r','LineWidth',1)
                 ylabel(sprintf('K_{P_%i}', row))
             end
+            xlabel('Samples, k')
             
-            subplot(items, 1, items)
-                plot(self.performance(:,items),'r','LineWidth',1)
-                ylabel('Control signal, u [V]')
-                xlabel('Samples, k')
         end
     end
     

@@ -6,6 +6,8 @@ classdef Helicopter2DOF < Plant
     methods (Access = public)
         function self = Helicopter2DOF()
             self.name = '2 DOF Helicopter';
+            self.labels = {'pitch', 'yaw'};
+            self.symbols = {'theta', 'phi'};
             self.nStates = self.ORDER;
         end
         
@@ -16,6 +18,10 @@ classdef Helicopter2DOF < Plant
         
         function order = getOrder(self)
             order = self.ORDER;
+        end
+        
+        function labels = getLabels(self)
+            labels = self.labels;
         end
     end
     

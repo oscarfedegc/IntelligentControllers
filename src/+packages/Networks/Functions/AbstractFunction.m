@@ -17,8 +17,10 @@ classdef AbstractFunction < handle
         end
         
         function generate(self)
-            self.scales = rand(1, self.neurons);
-            self.shifts = rand(1, self.neurons);
+            randd = @(a,b,f,c) a + (b-a)*rand(f,c);
+            
+            self.setScales(randd(1,1,1,self.neurons))
+            self.setShifts(randd(-1,1,1,self.neurons))
         end
         
         function initialize(self, scales, shifts)
@@ -70,6 +72,10 @@ classdef AbstractFunction < handle
         
         function setShifts(self, shifts)
             self.shifts = shifts;
+        end
+        
+        function rates = getLearningRates(self)
+            rates = self.learningRates;
         end
         
         function setLearningRates(self, rates)

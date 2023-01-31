@@ -1,6 +1,6 @@
 classdef Plant < handle
     properties (Access = protected)
-        name
+        name, labels, symbols % {must Be String}
         nStates {mustBeInteger}
         states, Gamma, approximation, period {mustBeNumeric}
     end

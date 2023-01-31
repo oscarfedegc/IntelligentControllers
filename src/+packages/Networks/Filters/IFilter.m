@@ -97,6 +97,15 @@ classdef IFilter < handle
         end
     end
     
+    methods (Access = protected)
+        function writeParameterFile(~, matrix, directory, filename, name)
+            T = array2table(matrix);
+            filename = lower([directory filename ' ' name '.csv']);
+            
+            writetable(T, filename)
+        end
+    end
+    
     methods (Access = public)
         function setLearningRates(self, rates)
             self.learningRates = rates;
@@ -122,6 +131,10 @@ classdef IFilter < handle
             coeffsM = self.coeffsM;
         end
         
+        function N = getCoeffsN(self)
+            N = self.coeffsN;
+        end
+        
         function outputs = getOutputs(self)
             outputs = self.oValues;
         end
@@ -135,10 +148,12 @@ classdef IFilter < handle
         end
     end
     
-    methods (Access = protected)        
+    methods (Access = protected)
         function generate(self)
-            self.feedbacks = rand(self.inputs, self.coeffsM);
-            self.feedforwards = rand(self.outputs, self.coeffsN);
+            randd = @(a,b,f,c) a + (b-a)*rand(f,c);
+            
+            self.setFeedbacks(randd(0,0,self.outputs,self.coeffsM))
+            self.setFeedforwards(randd(0,0,self.outputs,self.coeffsN))
             self.iMemory = zeros(self.inputs, self.coeffsM);
             self.oMemory = zeros(self.outputs, self.coeffsN);
         end

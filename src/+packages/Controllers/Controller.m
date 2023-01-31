@@ -45,7 +45,7 @@ classdef Controller < handle
         %   @param {int} iteration Indicates the current number of the sample.
         %
         function setPerformance(self, iteration)
-            self.performance(iteration,:) = [self.gains, self.signal];
+            self.performance(iteration,:) = [self.signal self.gains];
         end
         
         % Gets the all behavior for the generated simulation.
