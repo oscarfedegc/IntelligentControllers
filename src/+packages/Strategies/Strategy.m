@@ -114,29 +114,15 @@ classdef Strategy < handle
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             T = self.period;
-            
-            self.metrics = [self.ISE(identifError(:,1),T), self.ISE(trackingError(:,1),T), ...
-                self.IAE(identifError(:,1),T), self.IAE(trackingError(:,1),T), ...
-                self.IATE(identifError(:,1),T), self.IATE(trackingError(:,1),T)...
-                self.ISE(identifError(:,2),T), self.ISE(trackingError(:,2),T), ...
-                self.IAE(identifError(:,2),T), self.IAE(trackingError(:,2),T), ...
-                self.IATE(identifError(:,2),T), self.IATE(trackingError(:,2),T)];
-        end
-        
-        function rst = ISE(~, vector, period)
-            rst = sum(period .* vector.^2);
-        end
-        
-        function rst = IAE(~, vector, period)
-            rst = sum(period .* abs(vector));
-        end
-        
-        function rst = IATE(~, vector, period)            
-            for i = 1:length(vector)
-                k = i-1;
-                vector(i) = period * k * abs(vector(i));
+
+            self.metrics = [];
+
+            for i = 1:2
+                self.metrics = [self.metrics, ...
+                    IMetrics.ISE(identifError(:,i),T), IMetrics.ISE(trackingError(:,i),T), ...
+                    IMetrics.IAE(identifError(:,i),T), IMetrics.IAE(trackingError(:,i),T), ...
+                    IMetrics.IATE(identifError(:,i),T), IMetrics.IATE(trackingError(:,i),T)];
             end
-            rst = sum(vector);
         end
     end
 end
