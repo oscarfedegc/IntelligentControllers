@@ -1,4 +1,4 @@
-classdef IWindow < AbstractFunction
+classdef IWindow < ActivationFunction
     properties (Constant)
         K = 3/16;
         
@@ -36,7 +36,7 @@ classdef IWindow < AbstractFunction
             end
             self.neurons = neurons;
             self.window = window;
-            self.generate();
+            self.initialize();
         end
         
         function evaluateFunction(self)

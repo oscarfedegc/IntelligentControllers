@@ -10,5 +10,4 @@ classdef Graphics < handle
         synapticWeights();
         controlSignals();
         estimation();
-    end
-end
+        endend

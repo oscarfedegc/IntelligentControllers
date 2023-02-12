@@ -13,19 +13,26 @@ classdef IFilter < handle
             self.coeffsM = amountFeedbacks;
             self.coeffsN = amountFeedforwards;
             self.persistentSignal = pSignal;
-            self.generate();
+            self.initialize();
         end
         
         function initialize(self, feedbacks, feedforwards, pSignal)
+            if nargin < 3
+                [feedbacks, feedforwards, pSignal] = self.getInitialValues();
+            end
+            
             self.feedbacks = feedbacks;
             self.feedforwards = feedforwards;
             self.persistentSignal = pSignal;
+            
+            self.iMemory = zeros(self.inputs, self.coeffsM);
+            self.oMemory = zeros(self.outputs, self.coeffsN);
         end
         
         function evaluate(self, iValues)
             self.updateIMemory(iValues);
             
-            gamma = diag(self.feedbacks * self.iMemory')';
+            gamma = diag(self.feedbacks * self.iMemory')' .* sum(iValues);
             rho = (diag(self.feedforwards * self.oMemory') .* self.persistentSignal)';
             
             self.Gamma = gamma;
@@ -47,7 +54,7 @@ classdef IFilter < handle
             self.feedforwards = self.feedforwards - self.learningRates(2).*feedforwards;
         end
         
-        function initPerformance(self, samples)
+        function bootPerformance(self, samples)
             self.perfFeedbacks = zeros(samples, self.inputs * self.coeffsM);
             self.perfFeedforwards = zeros(samples, self.outputs * self.coeffsN);
             self.perfOutputs = zeros(samples, self.outputs);
@@ -80,29 +87,11 @@ classdef IFilter < handle
             perfOutputs = self.perfOutputs;
         end
         
-        function perfOutputs = getPerformanceOutputs(self)
-            perfOutputs = self.perfOutputs;
-        end
-        
-        function [perfRho, perfGamma] = getApproximation(self)
-            perfRho = self.Rho;
-            perfGamma = self.Gamma;
-        end
-        
         function charts(self)
             self.plotCoefficientes(self.perfFeedbacks, self.inputs, self.coeffsM, ...
                 'Feedbacks coefficients', 'c');
             self.plotCoefficientes(self.perfFeedforwards, self.outputs, self.coeffsN, ...
                 'Feedforwards coefficients', 'd');
-        end
-    end
-    
-    methods (Access = protected)
-        function writeParameterFile(~, matrix, directory, filename, name)
-            T = array2table(matrix);
-            filename = lower([directory filename ' ' name '.csv']);
-            
-            writetable(T, filename)
         end
     end
     
@@ -149,13 +138,31 @@ classdef IFilter < handle
     end
     
     methods (Access = protected)
-        function generate(self)
+        function writeParameterFile(~, matrix, directory, filename, name)
+            T = array2table(matrix);
+            filename = lower([directory filename ' ' name '.csv']);
+            
+            writetable(T, filename)
+        end
+        
+        function [feedbacks, feedforwards, pSignal] = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
-            self.setFeedbacks(randd(0,0,self.outputs,self.coeffsM))
-            self.setFeedforwards(randd(0,0,self.outputs,self.coeffsN))
-            self.iMemory = zeros(self.inputs, self.coeffsM);
-            self.oMemory = zeros(self.outputs, self.coeffsN);
+            value = 1;
+            pSignal = 0.001;
+            
+            feedbacks = zeros(self.outputs,self.coeffsM);
+            feedforwards = randd(-value,value,self.outputs,self.coeffsN);
+            
+            for i = 1:length(feedforwards(1,:))
+                for j = 1:length(feedforwards(:,1))
+                    if feedforwards(j,i) < 0
+                        feedforwards(j,i) = -value;
+                    else
+                        feedforwards(j,i) = value;
+                    end
+                end
+            end
         end
         
         function plotCoefficientes(~, array, cols, rows, title, tag)

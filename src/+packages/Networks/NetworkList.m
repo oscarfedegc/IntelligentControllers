@@ -1,6 +1,7 @@
 classdef NetworkList
     enumeration
+        WavenetIIR
+        ActorCriticWavenetIIR
         Wavenet
-        ActorCritic
     end
 end

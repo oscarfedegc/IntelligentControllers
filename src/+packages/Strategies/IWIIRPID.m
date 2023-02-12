@@ -47,11 +47,11 @@ classdef IWIIRPID < Strategy
             self.feedforwards = 5;
             self.persistentSignal = 1e-3;
             
-            self.nnaType = NetworkList.Wavenet;
+            self.nnaType = NetworkList.WavenetIIR;
             self.inputs = 2;
             self.outputs = 2;
             
-            self.learningRates = [1e-18, 1e-18, 1e-18, 1e-18, 1e-18];
+            self.learningRates = [1e-10, 1e-10, 1e-10, 1e-10, 1e-10];
         end
         
         % This funcion calls the class to generates the objects for the simulation.

@@ -9,6 +9,8 @@ classdef FunctionTestings < handle
         end
         
         function run(self)
+            randd = @(a,b,f,c) a + (b-a)*rand(f,c);
+            
             neurons = 5;
             tFinal = 30;
             period = 0.005;
@@ -23,20 +25,25 @@ classdef FunctionTestings < handle
             self.instance.setScales(ones(1,neurons))
             self.instance.setShifts(rand(1,neurons))
             
-            self.instance.getNeurons()
-            self.instance.getScales()
-            self.instance.getShifts()
-            self.instance.evaluate(period)
-            self.instance.getFuncOutput()
-            self.instance.getTau()
+            temp = 0;
             
-%             for i = 1:samples
-%                 self.instance.evaluate(i * period)
-%                 self.instance.setPerformance(i)
-%                 self.instance.update(rand(1,neurons), rand(1,neurons))
-%             end
-%             
-%             self.instance.charts()
+            for i = 1:samples
+                self.instance.evaluate(i * period)
+                self.instance.setPerformance(i)
+                
+                if temp == 200
+                    a_  = randd(-1,1,1,neurons);
+                    b_  = randd(-1,1,1,neurons);
+                    temp = 0;
+                else
+                    a_  = randd(0,0,1,neurons);
+                    b_  = randd(0,0,1,neurons);
+                end
+                temp = temp + 1;
+                self.instance.update(a_, b_)
+            end
+            
+            self.instance.charts()
         end
     end
 end

@@ -1,4 +1,4 @@
-classdef IWavelet < AbstractFunction
+classdef IWavelet < ActivationFunction
     properties (Access = public)
         wavelet
     end
@@ -12,7 +12,7 @@ classdef IWavelet < AbstractFunction
             
             self.wavelet = wavelet;
             self.neurons = neurons;
-            self.generate();
+            self.initialize();
         end
         
         function evaluateFunction(self)

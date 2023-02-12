@@ -1,4 +1,4 @@
-classdef IAtomic < AbstractFunction
+classdef IAtomic < ActivationFunction
     properties (Constant)
         REPOSITORY = 'src/+repositories/WindowsCoeffs';
     end
@@ -28,7 +28,7 @@ classdef IAtomic < AbstractFunction
             self.xDiff = self.domain(self.items) - self.domain(1);
             self.yDiff = self.items - 1;
             
-            self.generate();
+            self.initialize();
         end
         
         function evaluateFunction(self)

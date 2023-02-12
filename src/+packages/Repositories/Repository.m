@@ -48,15 +48,13 @@ classdef Repository < handle
         end
         
         function writeConfiguration(self)
-            neurons = self.neuralNetwork.hiddenNeuronLayer.getNeurons();
-            backs = self.neuralNetwork.filterLayer.getCoeffsM();
-            forwards = self.neuralNetwork.filterLayer.getCoeffsN();
-            rates = [self.neuralNetwork.hiddenNeuronLayer.getLearningRates() ...
-                self.neuralNetwork.sWeightLearningRate ...
-                self.neuralNetwork.filterLayer.learningRates];
-            pSignals = self.neuralNetwork.filterLayer.persistentSignal;
+            instance = self.neuralNetwork.getHiddenNeuronLayer();
             
-            data = [neurons backs forwards rates pSignals];
+            neurons = instance.getNeurons();
+            rates = [instance.getLearningRates() ...
+                self.neuralNetwork.getLearningRateWeigtht()];
+            
+            data = [neurons rates];
             
             writematrix(data, self.configurationpath)
         end
@@ -89,23 +87,22 @@ classdef Repository < handle
         end
         
         function setFolderPath(self)
-            switch class(self.neuralNetwork.hiddenNeuronLayer)
+            instance = self.neuralNetwork.getHiddenNeuronLayer();
+            switch class(instance)
                 case 'IWavelet'
-                    name = string((self.neuralNetwork.hiddenNeuronLayer.wavelet));
+                    name = string((instance.wavelet));
                 case 'IWindow'
-                    name = string((self.neuralNetwork.hiddenNeuronLayer.window));
+                    name = string((instance.window));
                 case 'IAtomic'
                     name = 'atomic';
             end
             
             self.configurationpath = lower(sprintf('%s%s', self.CONFIGURATIONS, name));
             
-            neurons = self.neuralNetwork.hiddenNeuronLayer.getNeurons();
-            backs = self.neuralNetwork.filterLayer.getCoeffsM();
-            forwards = self.neuralNetwork.filterLayer.getCoeffsN();
+            neurons = instance.getNeurons();
             
-            suffix = lower(sprintf('/%s %02d%02d%02d/', name, neurons, backs, forwards));
-            self.filename = lower(sprintf('/%s %02d%02d%02d', name, neurons, backs, forwards));
+            suffix = lower(sprintf('/%s %02d/', name, neurons));
+            self.filename = lower(sprintf('/%s %02d', name, neurons));
             self.directory = lower([self.RESULTS, self.FOLDER, suffix]);
             
             

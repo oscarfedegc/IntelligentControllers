@@ -1,9 +1,9 @@
-classdef NetworkScheme < handle
+classdef WavenetIIRScheme < handle
     properties (Access = public)
         inputLayer, outputNetworkLayer, filterOutputLayer {mustBeNumeric}
         synapticWeights, sWeightLearningRate {mustBeNumeric}
         inputs, outputs, numberSynapticWeights {mustBeInteger}
-        perfSynapticWeights {mustBeNumeric}
+        perfSynapticWeights, perfOutputNL {mustBeNumeric}
         hiddenNeuronLayer % {must be AbstractActivationFunction}
         filterLayer % {must be ImplementFilters}
     end
@@ -13,8 +13,6 @@ classdef NetworkScheme < handle
         update();
         getGamma();
         plotSynapticWeights();
-        initBehavior();
-        setBehavior();
     end
     
     methods (Access = public)
@@ -50,6 +48,10 @@ classdef NetworkScheme < handle
             values = self.outputNetworkLayer;
         end
         
+        function perf = getBehaviorNeuronNetwork(self)
+            perf = self.perfOutputNL;
+        end
+        
         function outputs = getOutputs(self)
             outputs = self.filterOutputLayer;
         end
@@ -64,9 +66,9 @@ classdef NetworkScheme < handle
         
         function initPerformance(self, samples)
             self.perfSynapticWeights = zeros(samples, self.outputs * self.hiddenNeuronLayer.getNeurons());
+            self.perfOutputNL = zeros(samples, self.outputs);
             self.hiddenNeuronLayer.initPerformance(samples);
             self.filterLayer.initPerformance(samples);
-            self.initBehavior(samples);
         end
         
         function setPerformance(self, iteration)
@@ -74,9 +76,9 @@ classdef NetworkScheme < handle
             for item = 1:length(cols)-1
             	self.perfSynapticWeights(iteration, cols(item)+1:cols(item+1)) = self.synapticWeights(item,:);
             end
+            self.perfOutputNL(iteration,:) = self.getNetworkOutputs();
             self.hiddenNeuronLayer.setPerformance(iteration);
             self.filterLayer.setPerformance(iteration);
-            self.setBehavior(iteration);
         end
         
         function buildNeuronLayer(self, functionType, functionSelected, neurons, inputs, outputs)
@@ -92,14 +94,6 @@ classdef NetworkScheme < handle
         
         function setNeuronInitialValues(self, scales, shifts)
             self.hiddenNeuronLayer.initialize(scales, shifts);
-        end
-        
-        function buildFilterLayer(self, inputs, coeffsN, coeffsM, pSignal)
-            self.filterLayer = IFilter(inputs, coeffsN, coeffsM, pSignal);
-        end
-        
-        function setFilterInitialValues(self, feedbacks, feedforwards, pSignal)
-            self.filterLayer.initialize(feedbacks, feedforwards, pSignal);
         end
     end
     

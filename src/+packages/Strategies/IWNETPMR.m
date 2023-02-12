@@ -1,19 +1,19 @@
 % This class that calls the other classes and generates the simulations
-classdef IWIIRPMR < Strategy
+classdef IWNETPMR < Strategy
     properties (Access = public)
-        PREFIX = 'WaveNet-IIR PMR';
+        PREFIX = 'WaveNet PMR';
     end
     
     methods (Access = public)
         % Class constructor
-        function self = IWIIRPMR()
+        function self = IWNETPMR()
             return
         end
         
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 100; % Simulation time [sec]
+            self.tFinal = 30; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -23,7 +23,7 @@ classdef IWIIRPMR < Strategy
             self.indexes = 20;
             
             % Trajectory parameters (positions in degrees)
-            test = 1;
+            test = 4;
             switch test
                 case 1
                     self.references = struct('pitch', [-40 10 10 10 10 10 10 10 10 10 10 0], ...
@@ -41,24 +41,21 @@ classdef IWIIRPMR < Strategy
             
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPMR;
-            self.controllerGains = struct('pitch', [250 10 50], ...
-                                            'yaw', [220 4 5]);
-            self.controllerRates = struct('pitch', [0 0 0],...
-                                            'yaw', [0 0 0]);
+            self.controllerGains = struct('pitch', [25 1 5], ...
+                                            'yaw', [22 4 5]);
+            self.controllerRates = struct('pitch', [1 1 1],...
+                                            'yaw', [1 1 1]);
             
             % Wavenet-IIR parameters
-            self.nnaType = NetworkList.WavenetIIR;
+            self.nnaType = NetworkList.Wavenet;
             self.functionType = FunctionList.wavelet;
             self.functionSelected = WaveletList.morlet;
             
             self.inputs = 2;
             self.outputs = 2;
-            self.amountFunctions = 6;
-            self.feedbacks = 3;
-            self.feedforwards = 2;
-            self.persistentSignal = 1e-5;
+            self.amountFunctions = 3;
             
-            self.learningRates = [1e-6 1e-6 1e-6 1e-6 1e-6];
+            self.learningRates = 1e-4 .* ones(1,3);
         end
         
         % This funcion calls the class to generates the objects for the simulation.
@@ -96,14 +93,11 @@ classdef IWIIRPMR < Strategy
             self.neuralNetwork = NetworkFactory.create(self.nnaType);
             self.neuralNetwork.buildNeuronLayer(self.functionType, ...
                 self.functionSelected, self.amountFunctions, self.inputs, self.outputs);
-            self.neuralNetwork.buildFilterLayer(self.inputs, self.feedbacks, ...
-                self.feedforwards, self.persistentSignal);
             self.neuralNetwork.setLearningRates(self.learningRates);
-            self.neuralNetwork.bootInternalMemory();
             self.neuralNetwork.bootPerformance(samples);
             
             % Buildind the repository
-            self.repository = IRepositoryWNETIIRPMR();
+            self.repository = IRepositoryWNETPMR();
             
             self.repository.setModel(self.model)
             self.repository.setControllers(self.controllers)
@@ -116,6 +110,9 @@ classdef IWIIRPMR < Strategy
         
         % Executes the algorithm.
         function execute(self)
+            Gamma = ones(1,2);
+            self.isSuccessfully = true;
+            
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);
@@ -128,17 +125,22 @@ classdef IWIIRPMR < Strategy
                 
                 yMes = self.model.measured(u, iter);
                 yEst = self.neuralNetwork.getOutputs();
-                Gamma = self.neuralNetwork.filterLayer.getGamma();
                 
                 eTracking = yRef - yMes;
                 eIdentification = yMes - yEst;
                 
                 self.neuralNetwork.update(u, eIdentification)
                 
-                self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
-                self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
-                self.controllers(1).evaluate()
-                self.controllers(2).evaluate()
+                try
+                    self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
+                    self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
+                    self.controllers(1).evaluate()
+                    self.controllers(2).evaluate()
+                catch
+                    disp('AUTOTUNE FAILED!')
+                    self.isSuccessfully = false;
+                    break
+                end
                 
                 self.neuralNetwork.setPerformance(iter)
                 self.controllers(1).setPerformance(iter)
@@ -150,10 +152,18 @@ classdef IWIIRPMR < Strategy
         end
         
         function saveCSV(self)
+            if ~self.isSuccessfully
+                return
+            end
+            
             self.repository.write(self.indexes, self.metrics)
         end
         
         function charts(self)
+            if ~self.isSuccessfully
+                return
+            end
+            
             self.neuralNetwork.charts('compact')
             self.controllers(1).charts('Pitch controller')
             self.controllers(2).charts('Yaw controller')

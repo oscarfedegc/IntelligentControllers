@@ -1,4 +1,4 @@
-classdef AbstractFunction < handle
+classdef ActivationFunction < handle
     properties (Access = protected)
         neurons {mustBeInteger}
         scales, shifts, tau, funcOutput, dfuncOutput, learningRates {mustBeNumeric}
@@ -16,14 +16,11 @@ classdef AbstractFunction < handle
             self.evaluateFunction();
         end
         
-        function generate(self)
-            randd = @(a,b,f,c) a + (b-a)*rand(f,c);
-            
-            self.setScales(randd(1,1,1,self.neurons))
-            self.setShifts(randd(-1,1,1,self.neurons))
-        end
-        
         function initialize(self, scales, shifts)
+            if nargin < 2
+                [scales, shifts] = self.getInitialValues();
+            end
+            
             self.setScales(scales);
             self.setShifts(shifts);
         end
@@ -34,18 +31,20 @@ classdef AbstractFunction < handle
         end
         
         function charts(self)
-            self.plotParameters();
+            self.compactParameterCharts();
             self.plotFunctionVals();
         end
     end
     
     methods (Access = public)
-        function initPerformance(self, samples)
-            self.perfScales = zeros(samples, self.neurons);
-            self.perfShifts = self.perfScales;
-            self.perfTau = self.perfScales;
-            self.perfFuncOutput = self.perfScales;
-            self.perfdfunOutput = self.perfScales;
+        function bootPerformance(self, samples)
+            aux = zeros(samples, self.neurons);
+            
+            self.perfScales = aux;
+            self.perfShifts = aux;
+            self.perfTau = aux;
+            self.perfFuncOutput = aux;
+            self.perfdfunOutput = aux;
         end
         
         function setPerformance(self, iteration)
@@ -108,6 +107,37 @@ classdef AbstractFunction < handle
     end
     
     methods (Access = protected)
+        function compactParameterCharts(self)
+            cols = 3;
+            rows = 1;
+            tag = {'a', 'b', '\tau'};
+            lbl = {'Shifts', 'Scales', 'Wavelet'};
+            
+            figure('Name','Scaling and shifting parameters','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+            
+            for col = 1:cols
+                subplot(rows, cols, col)
+                hold on
+                
+                switch col
+                    case 1
+                        data = self.perfScales;
+                    case 2
+                        data = self.perfShifts;
+                    case 3
+                        data = self.perfTau;
+                end
+                
+                for neuron = 1:self.neurons
+                    plot(data(:, neuron),'LineWidth',1,'DisplayName',...
+                            sprintf('%s_{%i}', string(tag(col)), neuron))
+                end
+                ylabel(sprintf('%s [scalar]', string(lbl(col))))
+                xlabel('Samples, k')
+                legend(gca,'show')
+            end
+        end
+        
         function plotParameters(self)
             cols = 3;
             rows = self.neurons;
@@ -150,6 +180,12 @@ classdef AbstractFunction < handle
                     ylabel(sprintf('\\partial\\psi(\\tau_{%i})', row))
             end
             xlabel('Samples, k');
+        end
+        
+        function [scales, shifts] = getInitialValues(self)
+            temporal = 1;
+            scales = temporal .* ones(1,self.neurons);
+            shifts = temporal:temporal:temporal*self.neurons;
         end
         
         function calculateTau(self, instant)

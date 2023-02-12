@@ -1,7 +1,8 @@
 classdef RepositoryTypes
     enumeration
         WavenetPMR
-        WavenetPID
+        WavenetIIRPMR
+        WavenetIIRPID
         ActorCriticPID
     end
 end

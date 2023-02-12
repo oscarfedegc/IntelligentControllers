@@ -8,6 +8,7 @@ classdef Strategy < handle
         neuralNetwork % {must be NetworkScheme}
         trajectories % {must be ITrajectories}
         repository % {must be IRepository}
+        isSuccessfully % {must be Bolean}
     end
     
     properties (Access = protected)
@@ -52,6 +53,70 @@ classdef Strategy < handle
             fNormErrors(iter,:) = [norm(Gamma-GammaIIR), norm(Rho-RhoIIR)];
         end
         
+        function plottingV2(self)
+            figure('Name','Identification process','NumberTitle','off','units','normalized',...
+                'outerposition',[0 0 1 1]);
+            
+            tag = {'Pitch'; 'Yaw'};
+            lbl = {'theta'; 'phi'};
+            samples = self.trajectories.getSamples();
+            desired = rad2deg(self.trajectories.getAllReferences());
+            measurement = rad2deg(self.model.getPerformance());
+            approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
+            trackingError = desired - measurement;
+            identifError = measurement - approximation;
+            time = 0:self.period:self.tFinal;
+            time = time(1:samples);
+            rows = 2;
+            cols = length(desired(1,:)) * 2;
+            
+            % Tracking charts
+            for item = 1:cols/2
+                subplot(rows, cols, item)
+                hold on
+                plot(time, desired(:,item),'k--','LineWidth',1)
+                plot(time, measurement(:,item),'b:','LineWidth',1.5)
+                xlabel(sprintf('Time, t [sec]'))
+                ylabel(sprintf('%s (y_{r_\\%s}, y_\\%s)', string(tag(item)), string(lbl(item)), string(lbl(item))))
+                lgd = legend(sprintf('y_{r_\\%s}', string(lbl(item))), ...
+                    sprintf('y_{\\%s}', string(lbl(item))), 'Location','northoutside');
+                lgd.NumColumns = 2;
+                xlim([1 self.tFinal])
+            end
+            
+            % Approximation charts
+            for item = 1:cols/2
+                subplot(rows, cols, item + cols/2)
+                hold on
+                plot(time, measurement(:,item),'b:','LineWidth',1.5)
+                plot(time, approximation(:,item),'k-.','LineWidth',1)
+                xlabel(sprintf('Time, t [sec]'))
+                ylabel(sprintf('%s (y_{r_\\%s}, y_\\%s)', string(tag(item)), string(lbl(item)), string(lbl(item))))
+                lgd = legend(sprintf('y_{\\%s}', string(lbl(item))), ...
+                    sprintf('y_{\\%s}^\\Gamma', string(lbl(item))), 'Location','northoutside');
+                lgd.NumColumns = 2;
+                xlim([1 self.tFinal])
+            end
+            
+            % Tracking and identification errors charts            
+            for item = 1:cols/2
+                subplot(rows, cols, item + cols)
+                plot(time, trackingError(:,item),'r-.','LineWidth',1)
+                xlabel(sprintf('Time, t [sec]'))
+                legend(sprintf('\\epsilon_{\\%s}', string(lbl(item))),'Location','northoutside');
+                xlim([1 self.tFinal])
+            end
+            
+            for item = 1:cols/2
+                subplot(rows, cols, item + 3*cols/2)
+                plot(time, identifError(:,item),'r-.','LineWidth',1)
+                xlabel(sprintf('Time, t [sec]'))
+                ylabel(sprintf('e_\\%s', string(lbl(item))))
+                legend(sprintf('e_{\\%s}', string(lbl(item))),'Location','northoutside');
+                xlim([1 self.tFinal])
+            end
+        end
+        
         function plotting(self, ~)
             figure('Name','Identification process','NumberTitle','off','units','normalized',...
                 'outerposition',[0 0 1 1]);
@@ -61,7 +126,7 @@ classdef Strategy < handle
             samples = self.trajectories.getSamples();
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
-            approximation = rad2deg(self.neuralNetwork.getBehaviorOutputs());
+            approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             rows = 2;
@@ -72,7 +137,7 @@ classdef Strategy < handle
                 yyaxis left
                 hold on
                 plot(desired(:,item),'k--','LineWidth',1)
-                plot(measurement(:,item),'b:','LineWidth',1)
+                plot(measurement(:,item),'b:','LineWidth',1.5)
                 ylabel(sprintf('%s (y_{r_\\%s}, y_\\%s)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 yyaxis right
                 plot(trackingError(:,item),'r-.','LineWidth',1)
@@ -90,26 +155,29 @@ classdef Strategy < handle
                 subplot(rows, cols, item + cols)
                 yyaxis left
                 hold on
-                plot(measurement(:,item),'b:','LineWidth',1)
-                plot(approximation(:,item),'k--','LineWidth',1)
+                plot(measurement(:,item),'b:','LineWidth',1.5)
+                plot(identifError(:,item),'r-.','LineWidth',1)
                 ylabel(sprintf('%s (y_{\\%s}, y_\\%s^\\Gamma)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 yyaxis right
-                plot(identifError(:,item),'r-.','LineWidth',1)
+                plot(approximation(:,item),'k--','LineWidth',1)                
                 ylabel(sprintf('e_\\%s', string(lbl(item))))
                 lgd = legend(sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
                     sprintf('Approximation, y_{\\%s}^\\Gamma', string(lbl(item))), ...
                     sprintf('Identification error, e_{\\%s}', string(lbl(item))), ...
                     'Location','northoutside');
                 lgd.NumColumns = 3;
-                ylim([min(identifError(:,item)) max(identifError(:,item))])
                 xlim([1 samples])
             end
         end
         
         function setMetrics(self)
+            if ~self.isSuccessfully
+                return
+            end
+            
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
-            approximation = rad2deg(self.neuralNetwork.getBehaviorOutputs());
+            approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
             
             trackingError = desired - measurement;
             identifError = measurement - approximation;

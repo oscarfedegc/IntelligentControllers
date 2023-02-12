@@ -1,4 +1,4 @@
-classdef IActorCriticScheme < NetworkScheme
+classdef IActorCriticScheme < WavenetIIRScheme
     properties (Access = public)
         functionMemory, derivativeMemory, errorTD, rewardSignal, criticOutput {mustBeNumeric}
         perfErrorTD, perfRewardSignal, perfCriticOutput, actorOutputs {mustBeNumeric}
@@ -38,12 +38,6 @@ classdef IActorCriticScheme < NetworkScheme
         
         function update(self, controlSignals, identificationErrors)
             self.paramGradients(controlSignals, identificationErrors);
-        end
-        
-        function initBehavior(~,~)
-        end
-        
-        function setBehavior(~,~)
         end
         
         function gamma = getGamma(self)

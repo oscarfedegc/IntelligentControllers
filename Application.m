@@ -39,7 +39,7 @@ classdef Application < handle
             
             % Writes the simulations results to CSV files
             algorithm.saveCSV()
-            
+
             % Show the simulation results in graphs
             algorithm.charts()
         end

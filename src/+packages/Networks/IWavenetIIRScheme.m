@@ -1,36 +1,48 @@
-classdef IWavenetScheme < WavenetScheme
+classdef IWavenetIIRScheme < WavenetScheme
+    properties (Access = public)
+        functionMemory, derivativeMemory {mustBeNumeric}
+        filterLayer % {must be ImplementFilters}
+    end
+    
     methods (Access = public)
-        function self = IWavenetScheme()
+        function self = IWavenetIIRScheme()
             return
         end
         
         function setLearningRates(self, rates)
             self.sWeightLearningRate = rates(3);
             self.hiddenNeuronLayer.setLearningRates(rates(1:2))
+            self.filterLayer.setLearningRates(rates(4:5))
         end
         
         function evaluate(self, instant, inputs)
+            % Wavenet outputs
             self.setInputs(inputs);
             self.hiddenNeuronLayer.evaluate(instant);
             
             outputFunction = self.hiddenNeuronLayer.getFuncOutput();
             temp = self.calculateNetworkOutput(inputs, outputFunction, self.synapticWeights);
             self.setNetworkOutputs(temp);
+            
+            % IIR Filter outputs
+            self.filterLayer.evaluate(temp);
+            self.updateInternalMemory();
         end
         
         function update(self, inputs, identificationErrors)
-            [DeltaW, Deltaa, Deltab] = self.calculateGradients(inputs, identificationErrors);
+            [DeltaW, Deltaa, Deltab, DeltaC, DeltaD] = self.calculateGradients(inputs, identificationErrors);
             
             self.synapticWeights = self.synapticWeights - self.sWeightLearningRate .* DeltaW;
             self.hiddenNeuronLayer.update(Deltaa, Deltab);
+            self.filterLayer.update(DeltaC, DeltaD);
         end
         
         function output = getOutput(self)
-            output = self.outputLayer;
+            output = self.filterLayer.getOutputs();
         end
         
         function perfOutputs = getBehaviorApproximation(self)
-            perfOutputs = self.getBehaviorWavenet();
+            [~,~,~,~,perfOutputs] = self.filterLayer.getPerformance();
         end
         
         function charts(self, mode)
@@ -41,6 +53,29 @@ classdef IWavenetScheme < WavenetScheme
                 self.hiddenNeuronLayer.charts();
                 self.synapticWeightsCharts();
             end
+        end
+        
+        function buildFilterLayer(self, inputs, coeffsN, coeffsM, pSignal)
+            self.filterLayer = IFilter(inputs, coeffsN, coeffsM, pSignal);
+        end
+        
+        function setFilterInitialValues(self, feedbacks, feedforwards, pSignal)
+            self.filterLayer.initialize(feedbacks, feedforwards, pSignal);
+        end
+        
+        function bootInternalMemory(self)
+            self.functionMemory = zeros(self.filterLayer.getCoeffsM(), self.hiddenNeuronLayer.getNeurons());
+            self.derivativeMemory = self.functionMemory;
+        end
+        
+        function updateInternalMemory(self)
+            self.functionMemory = self.updateMatrix(self.functionMemory, self.hiddenNeuronLayer.getFuncOutput());
+            self.derivativeMemory = self.updateMatrix(self.functionMemory, self.hiddenNeuronLayer.getDerivative());
+        end
+        
+        function [RhoIIR, GammaIIR] = getApproximation(self)
+            RhoIIR = self.filterLayer.getRho();
+            GammaIIR = self.filterLayer.getGamma();
         end
     end
     
@@ -53,22 +88,36 @@ classdef IWavenetScheme < WavenetScheme
             rst = 0.5 * sum(error .^ 2);
         end
         
-        function [DeltaW, Deltaa, Deltab] = calculateGradients(self, controlSignals, error)
+        function [DeltaW, Deltaa, Deltab, DeltaC, DeltaD] = calculateGradients(self, controlSignals, error)
             U = sum(controlSignals);
-            phi = self.hiddenNeuronLayer.getFuncOutput();
-            dfunc = self.hiddenNeuronLayer.getDerivative();
-            weights = self.synapticWeights;
+            Ie = diag(error,0);
+            If = error;
             tau = self.hiddenNeuronLayer.getTau();
+            C = self.filterLayer.getFeedbacks();
+            A = self.functionMemory;
+            B = self.derivativeMemory;
+            Z = self.filterLayer.iMemory;
+            Y = self.filterLayer.oMemory;
+            p = self.filterLayer.persistentSignal;
             
-            DeltaW = U .* error' * phi;
-            Deltab = (U * error * weights) .* dfunc;
+            DeltaW = U .* Ie * C * A;
+            Deltab = U * If *(C * B);
             Deltaa = Deltab .* tau;
+            DeltaC = U * Ie * Z;
+            DeltaD = p .* Ie * Y;
         end
         
-        function bootBehavior(~,~)
+        function output = updateMatrix(~, matrix, newValues)
+            [a,~] = size(matrix);
+            output = [newValues; matrix(1:a-1,:)];
         end
         
-        function setBehavior(~,~)
+        function bootBehavior(self, samples)
+            self.filterLayer.bootPerformance(samples)
+        end
+        
+        function setBehavior(self, iteration)
+            self.filterLayer.setPerformance(iteration)
         end
         
         function synapticWeightsCharts(self)

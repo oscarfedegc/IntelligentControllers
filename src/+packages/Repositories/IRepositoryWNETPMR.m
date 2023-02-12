@@ -1,10 +1,10 @@
-classdef IRepositoryWNETIIRPMR < Repository
+classdef IRepositoryWNETPMR < Repository
     properties (Access = public)
-        FOLDER = 'WNET IIR PMR';
+        FOLDER = 'WNET PMR';
     end
     
     methods (Access = public)
-        function self = IRepositoryWNETIIRPMR()
+        function self = IRepositoryWNETPMR()
             return
         end
         
@@ -41,7 +41,6 @@ classdef IRepositoryWNETIIRPMR < Repository
             
             self.writeHiddenNeuronLayer(instants)
             self.writeSynapticWeights(instants, labels)
-            self.writeFilterLayer(instants, labels)
         end
         
         function writeControllerFiles(self)
@@ -76,33 +75,6 @@ classdef IRepositoryWNETIIRPMR < Repository
             self.writeParameterFile(tau_, 'perftau')
             self.writeParameterFile(outputs, 'perfpsi')
             self.writeParameterFile(derivatives, 'perfderivatives')
-        end
-        
-        function writeFilterLayer(self, instants, labels)
-            [perfFeedbacks, perfFeedforwards, perfGamma, perfRho, perfOutputs] = ...
-                self.neuralNetwork.filterLayer.getPerformance();
-            
-            outputs_ = self.neuralNetwork.filterLayer.outputs;
-            amountN = self.neuralNetwork.filterLayer.coeffsM;
-            amountM = self.neuralNetwork.filterLayer.coeffsN;
-            
-            for i = 1:outputs_
-                cols = [(i-1)*amountN + 1, i*amountN];
-                feedbacks_ = [instants perfFeedbacks(self.indexes,cols)];
-                
-                cols = [(i-1)*amountM + 1, i*amountM];
-                forwards_ = [instants perfFeedforwards(self.indexes,cols)];
-                
-                self.writeParameterFile(feedbacks_, ...
-                    sprintf('perffeedbacks %s', string(labels(i))))
-                self.writeParameterFile(forwards_, ...
-                    sprintf('perfforwards %s', string(labels(i))))
-            end
-            
-            approximation = [instants perfGamma(self.indexes,:), ...
-                perfRho(self.indexes,:), perfOutputs(self.indexes,:)];
-            
-            self.writeParameterFile(approximation, 'perfapprox')
         end
         
         function writeSynapticWeights(self, instants, labels)
