@@ -1,6 +1,5 @@
 classdef Graphics < handle
     properties (Access = protected)
-        
     end
     
     methods (Abstract = true)
@@ -10,4 +9,5 @@ classdef Graphics < handle
         synapticWeights();
         controlSignals();
         estimation();
-        endend
+    end
+end

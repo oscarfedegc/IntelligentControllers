@@ -28,6 +28,11 @@ classdef WavenetScheme < handle
         function rst = getCostFunction(self, error)
             rst = self.calculateCostFunction(error);
         end
+
+        function [scales, shifts] = getCurrentValues(self)
+            scales = self.hiddenNeuronLayer.getScales();
+            shifts = self.hiddenNeuronLayer.getShifts();
+        end
         
         function instance = getHiddenNeuronLayer(self)
             instance = self.hiddenNeuronLayer;

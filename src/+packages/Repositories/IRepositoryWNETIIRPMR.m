@@ -1,11 +1,42 @@
 classdef IRepositoryWNETIIRPMR < Repository
     properties (Access = public)
-        FOLDER = 'WNET IIR PMR';
+        FOLDER;
     end
     
     methods (Access = public)
-        function self = IRepositoryWNETIIRPMR()
-            return
+        function self = IRepositoryWNETIIRPMR(folder)
+            self.FOLDER = upper(folder);
+        end
+
+        function writeConfiguration(self)
+            instance = self.neuralNetwork.getHiddenNeuronLayer();
+
+            ctrls_ = length(self.controllers);
+            
+            neurons = instance.getNeurons();
+            feedbacks = self.neuralNetwork.filterLayer.getCoeffsM();
+            forwards = self.neuralNetwork.filterLayer.getCoeffsN();
+            pSignal = self.neuralNetwork.filterLayer.getPersistentSignal();
+            rates = [instance.getLearningRates() ...
+                self.neuralNetwork.getLearningRateWeigtht() ...
+                self.neuralNetwork.filterLayer.getLearningRates()];
+            gains = [];
+
+            for i = 1:ctrls_
+                gains = [gains self.controllers(i).getGains()];
+                rates = [rates self.controllers(i).getUpdateRates()];
+            end
+
+            gains_ = length(gains)/ctrls_;
+
+            tags = {'gain ', 'Rate'};
+            labels = self.model.getLabels();
+            values = [neurons feedbacks forwards pSignal gains rates];
+            varNames = self.getHeaderNames('iir', ctrls_, gains_, tags, labels);
+            
+            data = array2table(values,'VariableNames',varNames);
+            
+            writetable(data, self.configurationpath)
         end
         
         function writeModelFiles(self)
@@ -23,7 +54,7 @@ classdef IRepositoryWNETIIRPMR < Repository
             trackingError = trackingError(self.indexes,:);
             identifError = identifError(self.indexes,:);
             
-            filename_ = lower([self.directory self.filename ' perfmodel.csv']);
+            filename_ = [self.resultspath self.sku ' PERFMODEL.csv'];
             
             tags = {'ref', 'mes', 'est', 'epsilon', 'error'};
             labels = self.model.getLabels();
@@ -54,8 +85,11 @@ classdef IRepositoryWNETIIRPMR < Repository
                 performance = [instants performance(self.indexes,:)];
 
                 self.writeParameterFile(performance, ...
-                    sprintf('perfcontroller %s', string(labels(i))))
+                    upper(sprintf('perfcontroller %s', string(labels(i)))))
             end
+        end
+
+        function writeFinalParameters(~)
         end
     end
     
@@ -71,11 +105,11 @@ classdef IRepositoryWNETIIRPMR < Repository
             outputs = [instants funcOutput(self.indexes,:)];
             derivatives = [instants dfuncOutput(self.indexes,:)];
             
-            self.writeParameterFile(scale, 'perfscales')
-            self.writeParameterFile(shift, 'perfshifts')
-            self.writeParameterFile(tau_, 'perftau')
-            self.writeParameterFile(outputs, 'perfpsi')
-            self.writeParameterFile(derivatives, 'perfderivatives')
+            self.writeParameterFile(scale, 'PERFSCALES')
+            self.writeParameterFile(shift, 'PERFSHIFTS')
+            self.writeParameterFile(tau_, 'PERFTAU')
+            self.writeParameterFile(outputs, 'PERFPSI')
+            self.writeParameterFile(derivatives, 'PERFDERIVATIVES')
         end
         
         function writeSynapticWeights(self, instants, labels)
@@ -92,7 +126,7 @@ classdef IRepositoryWNETIIRPMR < Repository
                 data = [instants synaptics(idxs,cols)];
                 
                 self.writeParameterFile(data, ...
-                    sprintf('perfweights %s', string(labels(i))))
+                    upper(sprintf('perfweights %s', string(labels(i)))))
             end
         end
         
@@ -112,20 +146,20 @@ classdef IRepositoryWNETIIRPMR < Repository
                 forwards_ = [instants perfFeedforwards(self.indexes,cols)];
                 
                 self.writeParameterFile(feedbacks_, ...
-                    sprintf('perffeedbacks %s', string(labels(i))))
+                    upper(sprintf('perffeedbacks %s', string(labels(i)))))
                 self.writeParameterFile(forwards_, ...
-                    sprintf('perfforwards %s', string(labels(i))))
+                    upper(sprintf('perfforwards %s', string(labels(i)))))
             end
             
             approximation = [instants perfGamma(self.indexes,:), ...
                 perfRho(self.indexes,:), perfOutputs(self.indexes,:)];
             
-            self.writeParameterFile(approximation, 'perfapprox')
+            self.writeParameterFile(approximation, 'PERFAPPROX')
         end
         
         function writeParameterFile(self, var, parameter)
             T = array2table(var);
-            filename = lower([self.directory self.filename ' ' parameter '.csv']);
+            filename = [self.resultspath self.sku ' ' parameter '.csv'];
             
             writetable(T, filename)
         end

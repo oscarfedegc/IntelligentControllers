@@ -13,18 +13,8 @@ classdef IWavenetPID < Controller
             self.eTrackingMemory = zeros(1,3);
         end
         
-        % Assign the initial value of gains.
-        %
-        %   @param {object} self Stands for instantiated object from this class.
-        %   @param {float[]} gains Indicate the initial values.
-        %
-        function setGains(self, gains)
-            self.gains = gains;
-        end
-        
         % Defines the gains autotune algorithm.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {float} trackingErr Difference between the desired position
         %                              and the real position.
         %   @param {float} identificationErr Difference between the real position and 
@@ -76,7 +66,6 @@ classdef IWavenetPID < Controller
         
         % Shows the behavior of the gains and the control signal by means of a graph.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {string} title Indicates the name graph to show.
         %
         function charts(self, title)
@@ -104,6 +93,11 @@ classdef IWavenetPID < Controller
     end
     
     methods (Access = protected)
+        % Normalizes the gain values.
+        %
+        %   @param {float} inf Lower limit
+        %   @param {float} sup Superior limit
+        %
         function normalized(self, inf, sup)
             data = self.gains;
             self.gains = inf + (data - min(data)).*(sup - inf)./(max(data) - min(data));

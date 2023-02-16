@@ -1,16 +1,15 @@
 % This class that calls the other classes and generates the simulations
 classdef IWIIRPID < Strategy
     properties (Access = private)
-        tFinal, period {mustBeNumeric}
-        plantType % {must be PlantList}
-        controllerType % {must be ControllerTypes}
-        references, controllerGains, controllerRates % {must be Structure}
-        
-        nnaType % {must be NetworkList}
-        functionType % {must be FuntionList}
-        functionSelected % {must be WaveletList, WindowList or []}
-        amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
-        learningRates, persistentSignal, initialStates {mustBeNumeric}
+%         plantType % {must be PlantList}
+%         controllerType % {must be ControllerTypes}
+%         references, controllerGains, controllerRates % {must be Structure}
+%         
+%         nnaType % {must be NetworkList}
+%         functionType % {must be FuntionList}
+%         functionSelected % {must be WaveletList, WindowList or []}
+%         amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
+%         learningRates, persistentSignal, initialStates {mustBeNumeric}
     end
     
     methods (Access = public)

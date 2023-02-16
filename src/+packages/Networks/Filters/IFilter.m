@@ -30,7 +30,6 @@ classdef IFilter < handle
         % This functions initializes the values of the coefficients ans the
         % matrices memory.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {float} feedbacks Indicates the array of coefficient values.
         %   @param {float} feedforwards Indicates the array of coefficient values.
         %   @param {float} pSignal Denotes the persistent signal value.
@@ -50,7 +49,6 @@ classdef IFilter < handle
         
         % This function calculate the IIR filter outputs.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {float} iValues Indicates the array of input values.
         %
         function evaluate(self, iValues)
@@ -65,19 +63,36 @@ classdef IFilter < handle
             self.updateOMemory(self.oValues);
         end
         
+        % This function update the internal memory data.
+        %
+        %   @param {float} iValues Indicate the input values array.
+        %
         function updateIMemory(self, iValues)
             self.iMemory = [iValues' self.iMemory(:,1:self.coeffsM-1)];
         end
         
+        % This function update the internal memory data.
+        %
+        %   @param {float} oValues Indicate the output values array.
+        %
         function updateOMemory(self, oValues)
             self.oMemory = [oValues' self.oMemory(:,1:self.coeffsN-1)];
         end
         
+        % This function update the value of filter coefficients.
+        %
+        %   @param {float} feedbacks Indicates the feedbacks gradient.
+        %   @param {float} feedforwards Indicates the feedforwards gradient.
+        %
         function update(self, feedbacks, feedforwards)
             self.feedbacks = self.feedbacks - self.learningRates(1).*feedbacks;
             self.feedforwards = self.feedforwards - self.learningRates(2).*feedforwards;
         end
         
+        % Initializes the matrices to store the behavior of the filter parameters.
+        %
+        %   @param {integer} samples Denotes of the samples amount for the simulation.
+        %
         function bootPerformance(self, samples)
             self.perfFeedbacks = zeros(samples, self.inputs * self.coeffsM);
             self.perfFeedforwards = zeros(samples, self.outputs * self.coeffsN);
@@ -86,6 +101,10 @@ classdef IFilter < handle
             self.perfRho = zeros(samples, self.outputs);
         end
         
+        % Stores the current value parameters.
+        %
+        %   @param {integer} iteration Represents the current sample.
+        %
         function setPerformance(self, iteration)
             cols = 0:self.coeffsM:self.coeffsM*self.inputs;
             for item = 1:length(cols)-1
@@ -102,10 +121,22 @@ classdef IFilter < handle
             self.perfRho(iteration,:) = self.Rho;
         end
         
+        % Provides the output values from the filter.
+        %
+        %   @returns {float} perfOutputs Output values array.
+        %
         function perfOutputs = getPerfOutputs(self)
             perfOutputs = self.perfOutputs;
         end
         
+        % Provides the filter behavior during simulation.
+        %
+        %   @returns {float} perfFeedbacks Coefficient performance matrix.
+        %   @returns {float} perfFeedforwards Coefficient performance matrix.
+        %   @returns {float} perfGamma Identification parameter performance matrix.
+        %   @returns {float} perfRho Identification parameter performance matrix.
+        %   @returns {float} perfOutputs Output performance matrix.
+        %
         function [perfFeedbacks, perfFeedforwards, perfGamma, perfRho, perfOutputs] = ...
                 getPerformance(self)
             perfFeedbacks = self.perfFeedbacks;
@@ -115,6 +146,7 @@ classdef IFilter < handle
             perfOutputs = self.perfOutputs;
         end
         
+        % Calls the functions to show the filter behavior.
         function charts(self)
             self.plotCoefficientes(self.perfFeedbacks, self.inputs, self.coeffsM, ...
                 'Feedbacks coefficients', 'c');
@@ -123,9 +155,14 @@ classdef IFilter < handle
         end
     end
     
+    % These funcions are the getters and setters for each parameter class.
     methods (Access = public)
         function setLearningRates(self, rates)
             self.learningRates = rates;
+        end
+
+        function rates = getLearningRates(self)
+            rates = self.learningRates;
         end
         
         function setFeedbacks(self, feedbacks)
@@ -163,16 +200,33 @@ classdef IFilter < handle
         function Rho = getRho(self)
             Rho = self.Rho;
         end
+
+        function persistentSignal = getPersistentSignal(self)
+            persistentSignal = self.persistentSignal;
+        end
     end
     
     methods (Access = protected)
+        % Writes the filter parameters into a csv file.
+        %
+        %   @param {float} matrix The filter data.
+        %   @param {string} directory Folderpath to save the file.
+        %   @param {string} filename
+        %   @param {string} name Filename suffix.
+        %
         function writeParameterFile(~, matrix, directory, filename, name)
             T = array2table(matrix);
-            filename = lower([directory filename ' ' name '.csv']);
+            filename = [directory filename ' ' name '.csv'];
             
             writetable(T, filename)
         end
         
+        % Provedires the initial values of the filter
+        %
+        %   @returns {float} feedbacks Coefficient values.
+        %   @returns {float} feedforwards Coefficient values.
+        %   @returns {float} pSignal The persistent signal value.
+        %
         function [feedbacks, feedforwards, pSignal] = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
@@ -183,6 +237,14 @@ classdef IFilter < handle
             feedforwards= zeros(self.outputs,self.coeffsN);
         end
         
+        % Shows the behavior of the filter coefficients by means of a graph.
+        %
+        %   @param {float} array Filter coefficients performance matrix.
+        %   @param {integer} cols Indicates the inputs amount.
+        %   @param {integer} rows Represents the coefficients amount.
+        %   @param {string} title The chart title.
+        %   @param {string} tag Indicates the axis movement.
+        %
         function plotCoefficientes(~, array, cols, rows, title, tag)
             figure('Name',title,'NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
             

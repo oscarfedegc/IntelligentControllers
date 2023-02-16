@@ -107,8 +107,6 @@ classdef IWNETPMR < Strategy
             self.repository.setNeuralNetwork(self.neuralNetwork)
             self.repository.setTrajectories(self.trajectories)
             self.repository.setFolderPath()
-            
-            self.repository.writeConfiguration()
         end
         
         % Executes the algorithm.
@@ -154,6 +152,7 @@ classdef IWNETPMR < Strategy
         end
         
         function saveCSV(self)
+            self.repository.writeConfiguration()
             self.repository.write(self.indexes, self.metrics)
         end
         

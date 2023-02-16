@@ -13,22 +13,19 @@ classdef IWIIRPMR < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 30; % Simulation time [sec]
+            self.tFinal = 15; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
             self.period = 0.005; % Plant sampling period [sec]
             self.initialStates = [0 0 0 0];
-            
-            % Sampling amount for output files
-            self.indexes = 20;
-            
+
             % Trajectory parameters (positions in degrees)
             test = 1;
             switch test
                 case 1
-                    self.references = struct('pitch', [-40 10 10 10 20 20 0], ...
-                                             'yaw', [0 30 30 30 10 10 0]);
+                    self.references = struct('pitch', [-40 20 20 20 20 0], ...
+                                             'yaw', [0 30 30 0 -30 -30 0]);
                 case 2
                     self.references = struct('pitch', [-30 -20 20 -20 20 -20 20 -20 -30], ...
                                              'yaw', [0 30 -30 30 -30 30 -30 0]);
@@ -58,11 +55,11 @@ classdef IWIIRPMR < Strategy
             self.outputs = 2;
             self.amountFunctions = 4;
             self.feedbacks = 4;
-            self.feedforwards = 2;
-            self.persistentSignal = 0.1;
+            self.feedforwards = 4;
+            self.persistentSignal = 1;
             
-            self.learningRates = [1e-4 1e-4 1e-5 1e-2 1e-3];
-            self.rangeSynapticWeights = 0.05;
+            self.learningRates = [1e-4 1e-4 1e-6 1e-4 1e-4];
+            self.rangeSynapticWeights = 0.005;
         end
         
         % This funcion calls the class to generates the objects for the simulation.
@@ -85,12 +82,14 @@ classdef IWIIRPMR < Strategy
             % Building the pitch controller            
             pitchController = ControllerFactory.create(self.controllerType);
             pitchController.setGains(self.controllerGains.pitch)
+            pitchController.setLevelDescomposition()
             pitchController.setUpdateRates(self.controllerRates.pitch)
             pitchController.initPerformance(samples)
             
             % Buildin the yaw controller
             yawController = ControllerFactory.create(self.controllerType);
             yawController.setGains(self.controllerGains.yaw)
+            yawController.setLevelDescomposition()
             yawController.setUpdateRates(self.controllerRates.yaw);
             yawController.initPerformance(samples);
             
@@ -108,19 +107,22 @@ classdef IWIIRPMR < Strategy
             self.neuralNetwork.bootPerformance(samples)
             
             % Buildind the repository
-            self.repository = IRepositoryWNETIIRPMR();
+            self.repository = IRepositoryWNETIIRPMR(self.PREFIX);
             
             self.repository.setModel(self.model)
             self.repository.setControllers(self.controllers)
             self.repository.setNeuralNetwork(self.neuralNetwork)
             self.repository.setTrajectories(self.trajectories)
             self.repository.setFolderPath()
-            
-            self.repository.writeConfiguration()
+
+            % Sampling amount for output files
+            self.indexes = ISamplePopulation.getIndexes(samples);
         end
         
         % Executes the algorithm.
-        function execute(self)            
+        function execute(self)
+            self.repository.writeConfiguration()
+
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);

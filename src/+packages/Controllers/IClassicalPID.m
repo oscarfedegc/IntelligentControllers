@@ -13,18 +13,8 @@ classdef IClassicalPID < Controller
             self.eTrackingMemory = zeros(1,3);
         end
         
-        % Assign the initial value of gains.
-        %
-        %   @param {object} self Stands for instantiated object from this class.
-        %   @param {float[]} gains Indicate the initial values.
-        %
-        function setGains(self, gains)
-            self.gains = gains;
-        end
-        
         % Defines the gains autotune algorithm.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {float} trackingErr Difference between the desired position
         %                              and the real position.
         %   @param {float} identificationErr Difference between the real position and 
@@ -60,10 +50,8 @@ classdef IClassicalPID < Controller
             self.eTrackingMemory
         end
         
-        % This function is in charge of calculate the control signal.
-        %
-        %   @param {object} self Stands for instantiated object from this class.
-        %
+        % This function is in charge of calculate the control signal by
+        % applying its controller formula.
         function evaluate(self)            
             u = self.signal;
             kp = self.gains(1);
@@ -76,7 +64,6 @@ classdef IClassicalPID < Controller
         
         % Shows the behavior of the gains and the control signal by means of a graph.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {string} title Indicates the name graph to show.
         %
         function charts(self, title)

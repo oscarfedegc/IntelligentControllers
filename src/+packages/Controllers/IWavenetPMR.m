@@ -31,18 +31,15 @@ classdef IWavenetPMR < Controller
         % Assigns the initial value of gains, defines the descomposition
         % level and initializes the arrays memory for descomposition.
         %
-        %   @param {object} self Stands for instantiated object from this class.
-        %   @param {float[]} gains Indicate the initial values.
+        %   @param {float} gains Indicate the initial values array.
         %
-        function setGains(self, gains)
-            self.gains = gains;
-            self.level = length(gains) - 1;
+        function setLevelDescomposition(self)
+            self.level = length(self.gains) - 1;
             self.eTrackingMemory = zeros(2, self.level + 1);
         end
         
         % Defines the gains autotune algorithm.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {float} trackingError Difference between the desired position
         %                              and the real position.
         %   @param {float} gamma Represents a wavenet parameter.
@@ -59,7 +56,7 @@ classdef IWavenetPMR < Controller
                 deltaGains(i) = mu(i) * identificationError * Gamma * (epsilon(1,i) - epsilon(2,i));
             end
             
-            self.gains = abs(self.gains + deltaGains);
+            self.gains = self.gains + deltaGains;
         end
         
         % This function is responsable for store the tracking error into an
@@ -73,10 +70,8 @@ classdef IWavenetPMR < Controller
             self.descomposition(self.errorSignals);
         end
         
-        % This function is in charge of calculate the control signal.
-        %
-        %   @param {object} self Stands for instantiated object from this class.
-        %
+        % This function is in charge of calculate the control signal by
+        % applying the controller formula.
         function evaluate(self)
             epsilon = self.eTrackingMemory(1,:) - self.eTrackingMemory(2,:);
             self.signal = self.signal + sum(self.gains.*epsilon);
@@ -84,8 +79,9 @@ classdef IWavenetPMR < Controller
         
         % Shows the behavior of the gains and the control signal by means of a graph.
         %
-        %   @param {object} self Stands for instantiated object from this class.
         %   @param {string} title Indicates the name graph to show.
+        %   @param {float} offset Represents the phase shitf applied to the
+        %                                                         contol signal.
         %
         function charts(self, title, offset)
             figure('Name',title,'NumberTitle','off','units','normalized',...
@@ -110,9 +106,8 @@ classdef IWavenetPMR < Controller
     methods (Access = protected)
         % Implements the descomposition methods for the tracking error signal.
         %
-        %   @param {object} self
-        %   @param {float[]} errorSignal The tracking error from the
-        %                                current until (k-N) periods.
+        %   @param {float} errorSignal The tracking error from the current
+        %                                                 until (k-N) periods.
         %
         function descomposition(self, errorSignal)
             output = zeros(self.errorSamples, self.level + 1);

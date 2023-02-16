@@ -19,11 +19,7 @@ classdef Application < handle
             addpath ('src/+packages/Strategies')
             addpath ('src/+packages/Tools')
             addpath ('src/+packages/UnitTestings')
-            
-%             instance = NetworksIIRTestings();
-%             instance.run()
-%             return
-            
+
             % Instance the algorithm
             algorithm = Algorithm();
             

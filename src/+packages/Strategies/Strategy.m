@@ -91,7 +91,6 @@ classdef Strategy < handle
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
-            approximation = rad2deg(self.neuralNetwork.getBehaviorWavenet());
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             time = 0:self.period:self.tFinal;
@@ -167,7 +166,6 @@ classdef Strategy < handle
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
-            approximation = rad2deg(self.neuralNetwork.getBehaviorWavenet());
             
             rows = 2;
             cols = length(desired(1,:));

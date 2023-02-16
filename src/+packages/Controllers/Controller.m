@@ -1,4 +1,4 @@
-% This abstract class represents the controller schemes and their
+% This abstract class represents the controller schemes and their%
 % components: the gains, the update rates, the control signals, and the
 % tracking error memory for autotune.
 classdef Controller < handle
@@ -10,7 +10,6 @@ classdef Controller < handle
     % Theses functions must be implemented in all inherited classes, and have
     % to be called in the following order.
     methods (Abstract)
-        setGains();
         evaluate();
         autotune();
         updateMemory();
@@ -18,15 +17,38 @@ classdef Controller < handle
     end
     
     methods (Access = public)
-        % Theses functions are the getters and setter to access the protected properties.
+        % Assign the initial value of gains.
+        %
+        %   @param {float} gains Indicate the initial values array.
+        %
+        function setGains(self, gains)
+            self.gains = gains;
+        end
+
+        % Provides the current control gains.
+        %
+        %   @returns {float} gains Indicates the gain values.
+        %
         function gains = getGains(self)
             gains = self.gains;
         end
         
+        % Assign the values of gain update rates.
+        %
+        %   @param {float} rates Indicates the values array.
+        %
         function setUpdateRates(self, rates)
             self.updateRates = rates;
         end
+
+        function rates = getUpdateRates(self)
+            rates = self.updateRates;
+        end
         
+        % Provides the current control signal.
+        %
+        %   @returns {float} signal Indicates the current value.
+        %
         function signal = getSignal(self)
             signal = self.signal;
         end
@@ -50,7 +72,7 @@ classdef Controller < handle
         
         % Gets the all behavior for the generated simulation.
         %
-        %   @returns {float[][]} performance Indicates the resulting matrix.
+        %   @returns {float} performance Indicates the resulting matrix.
         %
         function performance = getPerformance(self)
             performance = self.performance;
