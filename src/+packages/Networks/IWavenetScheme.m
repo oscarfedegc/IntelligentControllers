@@ -10,10 +10,12 @@ classdef IWavenetScheme < WavenetScheme
         end
         
         function evaluate(self, instant, inputs)
+            % Evaluation of activation functions
             self.setInputs(inputs);
             self.hiddenNeuronLayer.evaluate(instant);
-            
             outputFunction = self.hiddenNeuronLayer.getFuncOutput();
+            
+            % Calculating the wavenet output
             temp = self.calculateNetworkOutput(inputs, outputFunction, self.synapticWeights);
             self.setNetworkOutputs(temp);
         end
@@ -23,10 +25,6 @@ classdef IWavenetScheme < WavenetScheme
             
             self.synapticWeights = self.synapticWeights - self.sWeightLearningRate .* DeltaW;
             self.hiddenNeuronLayer.update(Deltaa, Deltab);
-        end
-        
-        function output = getOutput(self)
-            output = self.outputLayer;
         end
         
         function perfOutputs = getBehaviorApproximation(self)

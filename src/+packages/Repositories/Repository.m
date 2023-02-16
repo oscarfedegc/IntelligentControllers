@@ -101,8 +101,18 @@ classdef Repository < handle
             
             neurons = instance.getNeurons();
             
-            suffix = lower(sprintf('/%s %02d/', name, neurons));
-            self.filename = lower(sprintf('/%s %02d', name, neurons));
+            try
+                feedbacks = self.neuralNetwork.filterLayer.getCoeffsM();
+                forwards = self.neuralNetwork.filterLayer.getCoeffsN();
+                
+                suffix = lower(sprintf('/%s %02d%02d%02d/', name, neurons, feedbacks, forwards));
+                auxiliar = lower(sprintf('/%s %02d%02d%02d', name, neurons, feedbacks, forwards));
+            catch
+                suffix = lower(sprintf('/%s %02d/', name, neurons));
+                auxiliar = lower(sprintf('/%s %02d', name, neurons));
+            end
+            
+            self.filename = auxiliar;
             self.directory = lower([self.RESULTS, self.FOLDER, suffix]);
             
             

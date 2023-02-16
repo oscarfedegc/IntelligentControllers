@@ -19,13 +19,15 @@ classdef IWavenetIIRScheme < WavenetScheme
             % Wavenet outputs
             self.setInputs(inputs);
             self.hiddenNeuronLayer.evaluate(instant);
-            
             outputFunction = self.hiddenNeuronLayer.getFuncOutput();
             temp = self.calculateNetworkOutput(inputs, outputFunction, self.synapticWeights);
-            self.setNetworkOutputs(temp);
             
             % IIR Filter outputs
             self.filterLayer.evaluate(temp);
+            temp = self.filterLayer.getOutputs();
+            
+            % Setting final calculate
+            self.setNetworkOutputs(temp);
             self.updateInternalMemory();
         end
         
@@ -37,21 +39,19 @@ classdef IWavenetIIRScheme < WavenetScheme
             self.filterLayer.update(DeltaC, DeltaD);
         end
         
-        function output = getOutput(self)
-            output = self.filterLayer.getOutputs();
-        end
-        
         function perfOutputs = getBehaviorApproximation(self)
-            [~,~,~,~,perfOutputs] = self.filterLayer.getPerformance();
+            perfOutputs = self.filterLayer.getPerfOutputs();
         end
         
         function charts(self, mode)
             if strcmp(mode,'compact')
-                self.hiddenNeuronLayer.charts();
-                self.synapticWeightsCompactCharts();
+                self.hiddenNeuronLayer.charts()
+                self.filterLayer.charts()
+                self.synapticWeightsCompactCharts()
             else
-                self.hiddenNeuronLayer.charts();
-                self.synapticWeightsCharts();
+                self.hiddenNeuronLayer.charts()
+                self.filterLayer.charts()
+                self.synapticWeightsCharts()
             end
         end
         

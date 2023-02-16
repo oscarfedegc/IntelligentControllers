@@ -20,6 +20,10 @@ classdef Application < handle
             addpath ('src/+packages/Tools')
             addpath ('src/+packages/UnitTestings')
             
+%             instance = NetworksIIRTestings();
+%             instance.run()
+%             return
+            
             % Instance the algorithm
             algorithm = Algorithm();
             
@@ -38,7 +42,7 @@ classdef Application < handle
             algorithm.execute()
             
             % Writes the simulations results to CSV files
-            algorithm.saveCSV()
+            algorithm.writeCSV()
 
             % Show the simulation results in graphs
             algorithm.charts()

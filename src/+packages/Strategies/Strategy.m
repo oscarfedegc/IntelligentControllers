@@ -22,11 +22,12 @@ classdef Strategy < handle
         functionSelected % {must be WaveletList, WindowList or []}
         amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
         learningRates, persistentSignal, initialStates {mustBeNumeric}
+        pitchCtrlOffset, yawCtrlOffset {mustBeNumeric}
         
         fNormApprox, fNormErrors, indexes {mustBeNumeric}
         
         directory, filename % {must be String or path}
-        metrics {mustBeNumeric}
+        metrics, rangeSynapticWeights {mustBeNumeric}
     end
     
     % Theses functions must be implemented in all inherited classes, and have
@@ -36,11 +37,32 @@ classdef Strategy < handle
         builder();
         execute();
         saveCSV();
-        charts();
+        showCharts();
+    end
+    
+    methods (Access = public)
+        % This function calls a method to save the simulation results into a
+        % csv file
+        function writeCSV(self)
+            if ~self.isSuccessfully
+                return
+            end
+            self.saveCSV();
+        end
+        
+        % This function calls a custom method to plot the behavior of the
+        % controller parameters and Wavenet during simulation
+        function charts(self)
+            if ~self.isSuccessfully
+                return
+            end
+            self.showCharts();
+        end
     end
     
     methods (Access = protected)
-        % This function 
+        % This function calculates and stores the approximation error norm
+        % of the nonlinear model
         function fNormErrors = setNormError(self, fNormErrors, iter)
             [Rho, Gamma] = self.model.getApproximation();
             [RhoIIR, GammaIIR] = self.neuralNetwork.getApproximation();
@@ -53,7 +75,13 @@ classdef Strategy < handle
             fNormErrors(iter,:) = [norm(Gamma-GammaIIR), norm(Rho-RhoIIR)];
         end
         
+        % This function plots the simualtions results for the tracking
+        % performance and identification performance
         function plottingV2(self)
+            if ~self.isSuccessfully
+                return
+            end
+            
             figure('Name','Identification process','NumberTitle','off','units','normalized',...
                 'outerposition',[0 0 1 1]);
             
@@ -63,6 +91,7 @@ classdef Strategy < handle
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
+            approximation = rad2deg(self.neuralNetwork.getBehaviorWavenet());
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             time = 0:self.period:self.tFinal;
@@ -84,7 +113,7 @@ classdef Strategy < handle
                 xlim([1 self.tFinal])
             end
             
-            % Approximation charts
+            % Identification charts
             for item = 1:cols/2
                 subplot(rows, cols, item + cols/2)
                 hold on
@@ -98,17 +127,20 @@ classdef Strategy < handle
                 xlim([1 self.tFinal])
             end
             
-            % Tracking and identification errors charts            
+            % Tracking errors chart
             for item = 1:cols/2
                 subplot(rows, cols, item + cols)
+                hold on
                 plot(time, trackingError(:,item),'r-.','LineWidth',1)
                 xlabel(sprintf('Time, t [sec]'))
                 legend(sprintf('\\epsilon_{\\%s}', string(lbl(item))),'Location','northoutside');
                 xlim([1 self.tFinal])
             end
             
+            % Identification errors chart
             for item = 1:cols/2
                 subplot(rows, cols, item + 3*cols/2)
+                hold on
                 plot(time, identifError(:,item),'r-.','LineWidth',1)
                 xlabel(sprintf('Time, t [sec]'))
                 ylabel(sprintf('e_\\%s', string(lbl(item))))
@@ -117,59 +149,73 @@ classdef Strategy < handle
             end
         end
         
-        function plotting(self, ~)
+        % This function plots the simualtions results for the tracking
+        % performance and identification performance. The graphs using
+        % doubles scales.
+        function plotting(self)
+            if ~self.isSuccessfully
+                return
+            end
+            
             figure('Name','Identification process','NumberTitle','off','units','normalized',...
                 'outerposition',[0 0 1 1]);
             
             tag = {'Pitch'; 'Yaw'};
             lbl = {'theta'; 'phi'};
-            samples = self.trajectories.getSamples();
+            
+            instants = self.trajectories.getInstants();
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
-            trackingError = desired - measurement;
-            identifError = measurement - approximation;
+            approximation = rad2deg(self.neuralNetwork.getBehaviorWavenet());
+            
             rows = 2;
             cols = length(desired(1,:));
             
+            trackingError = desired - measurement;
+            identifError = measurement - approximation;
+            
+            % Tracking and tracking errors
             for item = 1:cols
                 subplot(rows, cols, item)
                 yyaxis left
                 hold on
-                plot(desired(:,item),'k--','LineWidth',1)
-                plot(measurement(:,item),'b:','LineWidth',1.5)
+                plot(instants,desired(:,item),'k','LineWidth',1)
+                plot(instants,measurement(:,item),'LineWidth',1.5)
                 ylabel(sprintf('%s (y_{r_\\%s}, y_\\%s)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 yyaxis right
-                plot(trackingError(:,item),'r-.','LineWidth',1)
+                plot(instants,trackingError(:,item),'LineWidth',1)
                 ylabel(sprintf('\\epsilon_\\%s', string(lbl(item))))
                 lgd = legend(sprintf('Reference, y_{r_\\%s}', string(lbl(item))), ...
                     sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
                     sprintf('Tracking error, \\epsilon_{\\%s}', string(lbl(item))), ...
                     'Location','northoutside');
                 lgd.NumColumns = 3;
-                ylim([min(trackingError(:,item)) max(trackingError(:,item))])
-                xlim([1 samples])
+                xlabel('Time, kT [sec]')
             end
             
+            % Identification and identification errors
             for item = 1:cols
                 subplot(rows, cols, item + cols)
                 yyaxis left
                 hold on
-                plot(measurement(:,item),'b:','LineWidth',1.5)
-                plot(identifError(:,item),'r-.','LineWidth',1)
+                plot(instants,measurement(:,item),'k','LineWidth',1.5)
+                plot(instants,approximation(:,item),'LineWidth',1)
                 ylabel(sprintf('%s (y_{\\%s}, y_\\%s^\\Gamma)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 yyaxis right
-                plot(approximation(:,item),'k--','LineWidth',1)                
+                plot(instants,identifError(:,item),'LineWidth',1)
                 ylabel(sprintf('e_\\%s', string(lbl(item))))
                 lgd = legend(sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
                     sprintf('Approximation, y_{\\%s}^\\Gamma', string(lbl(item))), ...
                     sprintf('Identification error, e_{\\%s}', string(lbl(item))), ...
                     'Location','northoutside');
                 lgd.NumColumns = 3;
-                xlim([1 samples])
+                xlabel('Time, kT [sec]')
             end
         end
         
+        % This functions calls a class to calculate different metrics for
+        % the tracking and identification process
         function setMetrics(self)
             if ~self.isSuccessfully
                 return

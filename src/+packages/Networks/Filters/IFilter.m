@@ -1,3 +1,5 @@
+% This class implements the infinite impulse response (IIR) filter and its
+% methods to calculate the outputs and update its coefficients.
 classdef IFilter < handle
     properties (Access = public)
         feedbacks, feedforwards, oValues, persistentSignal {mustBeNumeric}
@@ -7,6 +9,15 @@ classdef IFilter < handle
     end
     
     methods (Access = public)
+        % Class constructor.
+        %
+        %   @param {integer} inputs Number of entries.
+        %   @param {integer} amountFeedbacks Number of feedbacks coefficients.
+        %   @param {integer} amountFeedforwards Number of feedforwards coefficients.
+        %   @param {float} pSignal Persistent signal for the filter.
+        %
+        %   @returns {object} self Is the instantiated object.
+        %
         function self = IFilter(inputs, amountFeedbacks, amountFeedforwards, pSignal)
             self.inputs = inputs;
             self.outputs = inputs;
@@ -16,6 +27,14 @@ classdef IFilter < handle
             self.initialize();
         end
         
+        % This functions initializes the values of the coefficients ans the
+        % matrices memory.
+        %
+        %   @param {object} self Stands for instantiated object from this class.
+        %   @param {float} feedbacks Indicates the array of coefficient values.
+        %   @param {float} feedforwards Indicates the array of coefficient values.
+        %   @param {float} pSignal Denotes the persistent signal value.
+        %
         function initialize(self, feedbacks, feedforwards, pSignal)
             if nargin < 3
                 [feedbacks, feedforwards, pSignal] = self.getInitialValues();
@@ -29,6 +48,11 @@ classdef IFilter < handle
             self.oMemory = zeros(self.outputs, self.coeffsN);
         end
         
+        % This function calculate the IIR filter outputs.
+        %
+        %   @param {object} self Stands for instantiated object from this class.
+        %   @param {float} iValues Indicates the array of input values.
+        %
         function evaluate(self, iValues)
             self.updateIMemory(iValues);
             
@@ -76,6 +100,10 @@ classdef IFilter < handle
             self.perfOutputs(iteration,:) = self.oValues;
             self.perfGamma(iteration,:) = self.Gamma;
             self.perfRho(iteration,:) = self.Rho;
+        end
+        
+        function perfOutputs = getPerfOutputs(self)
+            perfOutputs = self.perfOutputs;
         end
         
         function [perfFeedbacks, perfFeedforwards, perfGamma, perfRho, perfOutputs] = ...
@@ -148,21 +176,11 @@ classdef IFilter < handle
         function [feedbacks, feedforwards, pSignal] = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
-            value = 1;
+            value = 0.1;
             pSignal = 0.001;
             
-            feedbacks = zeros(self.outputs,self.coeffsM);
-            feedforwards = randd(-value,value,self.outputs,self.coeffsN);
-            
-            for i = 1:length(feedforwards(1,:))
-                for j = 1:length(feedforwards(:,1))
-                    if feedforwards(j,i) < 0
-                        feedforwards(j,i) = -value;
-                    else
-                        feedforwards(j,i) = value;
-                    end
-                end
-            end
+            feedbacks = randd(value,2*value,self.outputs,self.coeffsM);
+            feedforwards= zeros(self.outputs,self.coeffsN);
         end
         
         function plotCoefficientes(~, array, cols, rows, title, tag)

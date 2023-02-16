@@ -29,8 +29,8 @@ classdef Algorithm < handle
             self.algorithm.charts();
         end
         
-        function saveCSV(self)
-            self.algorithm.saveCSV();
+        function writeCSV(self)
+            self.algorithm.writeCSV();
         end
     end
 end

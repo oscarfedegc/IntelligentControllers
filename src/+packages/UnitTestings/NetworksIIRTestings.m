@@ -5,7 +5,7 @@ classdef NetworksIIRTestings < handle
         end
         
         function run(self)
-            tFinal = 120;
+            tFinal = 30;
             period = 0.005;
             samples = round(tFinal/period);
             
@@ -29,12 +29,13 @@ classdef NetworksIIRTestings < handle
             coeffsM = 2;
             persistentSignal = 1e-5;
             
-            learningRates = [0.0005 0.001 0.0005 0.00001 0.00001];
+            learningRates = [0.0001 0.001 0.00005 0.000001 0.000001];
             
             WNET = NetworkFactory.create(nnaType);
+            WNET.setSynapticRange(0.5)
             WNET.buildNeuronLayer(type, option, neurons, inputs, outputs)
             WNET.buildFilterLayer(inputs, coeffsN, coeffsM, persistentSignal)
-            WNET.initInternalMemory()
+            WNET.bootInternalMemory()
             WNET.setLearningRates(learningRates)
             WNET.bootPerformance(samples)
             
@@ -77,7 +78,7 @@ classdef NetworksIIRTestings < handle
                 WNET.charts('compact');
                 figure('Name','Simulation results single wavenet','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
 
-                estimated = WNET.getBehavior();
+                estimated = WNET.getBehaviorApproximation();
                 error = targets - estimated;
 
                 subplot(3, 2, 1)

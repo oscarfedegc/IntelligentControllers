@@ -13,23 +13,23 @@ classdef IWNETPMR < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 30; % Simulation time [sec]
+            self.tFinal = 60; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
             self.period = 0.005; % Plant sampling period [sec]
-            self.initialStates = [0 0 0 0];
+            self.initialStates = [-40 0 0 0];
             
             self.indexes = 20;
             
             % Trajectory parameters (positions in degrees)
-            test = 4;
+            test = 1;
             switch test
                 case 1
                     self.references = struct('pitch', [-40 10 10 10 10 10 10 10 10 10 10 0], ...
                                              'yaw', [0 30 30 30 30 30 30 30 30 0]);
                 case 2
-                    self.references = struct('pitch', [-40 -30 30 -30 30 -30 30 -30 -40], ...
+                    self.references = struct('pitch', [-30 -20 20 -20 20 -20 20 -20 -30], ...
                                              'yaw', [0 30 -30 30 -30 30 -30 0]);
                 case 3
                     self.references = struct('pitch', [0 -3 3 -3 3 -3 3 -3 0], ...
@@ -41,10 +41,11 @@ classdef IWNETPMR < Strategy
             
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPMR;
-            self.controllerGains = struct('pitch', [25 1 5], ...
-                                            'yaw', [22 4 5]);
-            self.controllerRates = struct('pitch', [1 1 1],...
-                                            'yaw', [1 1 1]);
+            self.controllerGains = struct('pitch', [100 50 10 10 10 10], ...
+                                            'yaw', [100 200 25 10 10 10]);
+            self.controllerRates = struct('pitch', 1e-2.*ones(1,6),...
+                                            'yaw', 1e-2.*ones(1,6));
+            self.pitchCtrlOffset = 12.5;
             
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.Wavenet;
@@ -53,9 +54,10 @@ classdef IWNETPMR < Strategy
             
             self.inputs = 2;
             self.outputs = 2;
-            self.amountFunctions = 3;
+            self.amountFunctions = 10;
             
-            self.learningRates = 1e-4 .* ones(1,3);
+            self.learningRates = 1e-5*ones(1,3);
+            self.rangeSynapticWeights = 0.1;
         end
         
         % This funcion calls the class to generates the objects for the simulation.
@@ -78,8 +80,8 @@ classdef IWNETPMR < Strategy
             % Building the pitch controller            
             pitchController = ControllerFactory.create(self.controllerType);
             pitchController.setGains(self.controllerGains.pitch)
-            pitchController.setUpdateRates(self.controllerRates.pitch);
-            pitchController.initPerformance(samples);
+            pitchController.setUpdateRates(self.controllerRates.pitch)
+            pitchController.initPerformance(samples)
             
             % Buildin the yaw controller
             yawController = ControllerFactory.create(self.controllerType);
@@ -91,10 +93,11 @@ classdef IWNETPMR < Strategy
             
             % Building the Wavenet-IIR
             self.neuralNetwork = NetworkFactory.create(self.nnaType);
+            self.neuralNetwork.setSynapticRange(self.rangeSynapticWeights)
             self.neuralNetwork.buildNeuronLayer(self.functionType, ...
-                self.functionSelected, self.amountFunctions, self.inputs, self.outputs);
-            self.neuralNetwork.setLearningRates(self.learningRates);
-            self.neuralNetwork.bootPerformance(samples);
+                self.functionSelected, self.amountFunctions, self.inputs, self.outputs)
+            self.neuralNetwork.setLearningRates(self.learningRates)
+            self.neuralNetwork.bootPerformance(samples)
             
             % Buildind the repository
             self.repository = IRepositoryWNETPMR();
@@ -111,13 +114,12 @@ classdef IWNETPMR < Strategy
         % Executes the algorithm.
         function execute(self)
             Gamma = ones(1,2);
-            self.isSuccessfully = true;
             
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);
                 
-                up = self.controllers(1).getSignal();
+                up = self.controllers(1).getSignal() + self.pitchCtrlOffset;
                 uy = self.controllers(2).getSignal();
                 u = [up uy];
                 
@@ -129,18 +131,18 @@ classdef IWNETPMR < Strategy
                 eTracking = yRef - yMes;
                 eIdentification = yMes - yEst;
                 
-                self.neuralNetwork.update(u, eIdentification)
-                
-                try
-                    self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
-                    self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
-                    self.controllers(1).evaluate()
-                    self.controllers(2).evaluate()
-                catch
-                    disp('AUTOTUNE FAILED!')
+                if isnan(eTracking(1)) || isnan(eTracking(2)) || ...
+                        isnan(eIdentification(1)) || isnan(eIdentification(2))
                     self.isSuccessfully = false;
                     break
                 end
+                
+                self.neuralNetwork.update(u, eIdentification)
+                
+                self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
+                self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
+                self.controllers(1).evaluate()
+                self.controllers(2).evaluate()
                 
                 self.neuralNetwork.setPerformance(iter)
                 self.controllers(1).setPerformance(iter)
@@ -152,22 +154,14 @@ classdef IWNETPMR < Strategy
         end
         
         function saveCSV(self)
-            if ~self.isSuccessfully
-                return
-            end
-            
             self.repository.write(self.indexes, self.metrics)
         end
         
-        function charts(self)
-            if ~self.isSuccessfully
-                return
-            end
-            
+        function showCharts(self)
             self.neuralNetwork.charts('compact')
-            self.controllers(1).charts('Pitch controller')
-            self.controllers(2).charts('Yaw controller')
-            self.plottingV2();
+            self.controllers(1).charts('Pitch controller', self.pitchCtrlOffset)
+            self.controllers(2).charts('Yaw controller', 0)
+            self.plotting()
         end
     end
     
@@ -177,7 +171,7 @@ classdef IWNETPMR < Strategy
         %   @param {float} kT Instant of the time.
         %
         function log(self, kT, reference, measured, estimated, tracking, identification, control, gamma)
-            clc            
+            clc
             reference = rad2deg(reference);
             measured = rad2deg(measured);
             estimated = rad2deg(estimated);

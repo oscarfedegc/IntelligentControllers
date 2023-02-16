@@ -4,16 +4,16 @@ classdef NetworksTestings < handle
         end
         
         function run(self)
-            tFinal = 60;
+            tFinal = 90;
             period = 0.005;
             samples = round(tFinal/period);
             
             x = 0 : period : tFinal-period;
             trainingInputs = exp(-x./50) .* 5 .* sin(0.2.*x);
-            trainingInputs2 = -sin(0.005.*x.^2) - 1.2*cos(0.1.*x) - sin(0.05.*x.^2);
+            trainingInputs2 = -sin(0.005.*x.^2) - 1.2*cos(0.01.*x) - sin(0.005.*x.^2);
             
-            targetOutputs = trainingInputs;
-            targetOutputs2 = trainingInputs2;
+            targetOutputs = 10 .* trainingInputs;
+            targetOutputs2 = 10 .* trainingInputs2;
             
             targets = [targetOutputs', targetOutputs2'];
             
@@ -22,11 +22,12 @@ classdef NetworksTestings < handle
             option = WaveletList.morlet;
             inputs = 2;
             outputs = 2;
-            neurons = 10;
+            neurons = 5;
             
-            learningRates = [0.005 0.01 0.0005];
+            learningRates = [0.005 0.01 0.01];
             
             WNET = NetworkFactory.create(nnaType);
+            WNET.setSynapticRange(1)
             WNET.buildNeuronLayer(type, option, neurons, inputs, outputs);
             WNET.setLearningRates(learningRates);
             WNET.bootPerformance(samples);
@@ -69,7 +70,7 @@ classdef NetworksTestings < handle
                 WNET.charts('compact');
                 figure('Name','Simulation results single wavenet','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
 
-                estimated = WNET.getBehavior();
+                estimated = WNET.getBehaviorApproximation();
 
                 subplot(3, 2, 1)
                     plot(trainingInputs,'k--','LineWidth',1)
@@ -121,13 +122,12 @@ classdef NetworksTestings < handle
             period = 0.005;
             samples = round(tFinal/period);
             
-            x = 0:period:tFinal;
-            
-            trainingInputs = 5 .* cos(0 .* x);
-            trainingInputs2 = -4 .* cos(0 .* x);
+            x = 0 : period : tFinal-period;
+            trainingInputs = exp(-x./50) .* 5 .* sin(0.2.*x);
+            trainingInputs2 = -sin(0.005.*x.^2) - 1.2*cos(0.1.*x) - sin(0.05.*x.^2);
             
             plantType = PlantList.helicopter2DOF;
-            initialStates = [-40 0 0 0];
+            initialStates = [0 0 0 0];
             model = PlantFactory.create(plantType);
             model.setPeriod(period);
             model.setInitialStates(samples, deg2rad(initialStates))
@@ -139,170 +139,104 @@ classdef NetworksTestings < handle
             
             targets = rad2deg(model.getPerformance());
             
-            targetOutputs = targets(:,1);
-            targetOutputs2 = targets(:,2);
-            
+            nnaType = NetworkList.Wavenet;
             type = FunctionList.wavelet;
             option = WaveletList.morlet;
-            neurons = 3;
+            inputs = 2;
+            outputs = 2;
+            neurons = 6;
             
-            feedbacks = 3;
-            feedforwards = 2;
-            pSignal = 0.05;
-            
-            nnaType = NetworkList.Wavenet;
-            inputs = 1;
-            outputs = 1;
-            
-            learningRates = [1e-15 1e-15 1e-15 1e-15 1e-15];
-            
-            wavenetiir = NetworkFactory.create(nnaType);
-            wavenetiir.buildNeuronLayer(type, option, neurons, inputs, outputs);
-            wavenetiir.buildFilterLayer(inputs, feedbacks, feedforwards, pSignal);
-            wavenetiir.setLearningRates(learningRates);
-            wavenetiir.initInternalMemory();
-            wavenetiir.initPerformance(samples);
-            
-            wavenetiir2 = NetworkFactory.create(nnaType);
-            wavenetiir2.buildNeuronLayer(type, option, neurons, inputs, outputs);
-            wavenetiir2.buildFilterLayer(inputs, feedbacks, feedforwards, pSignal);
-            wavenetiir2.setLearningRates(learningRates);
-            wavenetiir2.initInternalMemory();
-            wavenetiir2.initPerformance(samples);
+            learningRates = [1e-8 1e-8 1e-5];
             
             WNET = NetworkFactory.create(nnaType);
-            WNET.buildNeuronLayer(type, option, 2*neurons, 2, 2);
-            WNET.buildFilterLayer(2, 2*feedbacks, 2*feedforwards, pSignal);
-            WNET.setLearningRates(learningRates);
-            WNET.initInternalMemory();
-            WNET.initPerformance(samples);
+            WNET.setSynapticRange(1)
+            WNET.buildNeuronLayer(type, option, neurons, inputs, outputs)
+            WNET.setLearningRates(learningRates)
+            WNET.bootPerformance(samples)
             
-            eIdent = zeros(samples,2);            
-            wIdent = zeros(samples,2);
+            wIdent = zeros(samples,3);
+            isOK = true;
             
             for iter = 1:samples
                 kT = iter * period;
                 
-                wavenetiir.evaluate(kT, trainingInputs(iter))
-                wavenetiir.setPerformance(iter)
-                
-                wavenetiir2.evaluate(kT, trainingInputs2(iter))
-                wavenetiir2.setPerformance(iter)
-                
                 WNET.evaluate(kT, [trainingInputs(iter), trainingInputs2(iter)])
                 WNET.setPerformance(iter)
                 
-                eIdentification = wavenetiir.getOutputs() - targetOutputs(iter);
-                eIdentification2 = wavenetiir2.getOutputs() - targetOutputs2(iter);
+                estimated = WNET.getOutputs();
                 
-                eIdent_ = WNET.getOutputs()*100 - [targetOutputs(iter) targetOutputs2(iter)];
-                
-                eIdent(iter,:) = [eIdentification eIdentification2];
-                
-                wIdent(iter,:) = eIdent_;
-                
-                wavenetiir.update(trainingInputs(iter), eIdentification)
-                wavenetiir2.update(trainingInputs2(iter), eIdentification2)
-                
-                WNET.update([trainingInputs(iter), trainingInputs2(iter)], eIdent_)
-                
-                temp = wavenetiir.getOutputs();
-                
-                if isnan(temp(1)) || isnan(temp(2))
+                if isnan(estimated(1)) || isnan(estimated(2))
+                    disp('Failed!')
+                    isOK = ~isOK;
                     break
                 end
                 
+                eIdent_ = estimated - targets(iter,:);
+                
+                wIdent(iter,:) = [eIdent_, WNET.getCostFunction(eIdent_)];
+                
+                WNET.update([trainingInputs(iter), trainingInputs2(iter)], eIdent_)
+                
                 clc
                 fprintf(' TIME == %10.3f seconds ==\n', kT);
+                fprintf(' %+010.3f\t%+010.3f\t%+010.3f\t%+010.3f\t%+010.3f\t%+010.3f\n', ...
+                    targets(iter,1), estimated(1), targets(iter,2), estimated(2),...
+                    eIdent_(1), eIdent_(2));
             end
             
-            disp('Double wavenet')
-            self.setMetrics(eIdent(:,1), period)
-            self.setMetrics(eIdent(:,2), period)
-            disp('Single wavenet')
-            self.setMetrics(wIdent(:,1), period)
-            self.setMetrics(wIdent(:,2), period)
+            if isOK
+                disp('Single wavenet')
+                self.setMetrics(wIdent(:,1), period)
+                self.setMetrics(wIdent(:,2), period)
 
-            figure('Name','Simulation results double wavenet','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
-            
-            estimated = rad2deg(wavenetiir.filterLayer.perfOutputs);
-            estimated2 = rad2deg(wavenetiir2.filterLayer.perfOutputs);
-            
-            subplot(3, 2, 1)
-                plot(trainingInputs,'k--','LineWidth',1)
-                ylabel('u_{\theta}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 3)
-                plot(targetOutputs,'r','LineWidth',1)
-                ylabel('y_{\theta}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 5)
-                plot(estimated,'r','LineWidth',1)
-                ylabel('y_{\theta_{estimated}}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 2)
-                plot(trainingInputs2,'k--','LineWidth',1)
-                ylabel('u_{\phi}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 4)
-                plot(targetOutputs2,'r','LineWidth',1)
-                ylabel('y_{\phi}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 6)
-                plot(estimated2,'r','LineWidth',1)
-                ylabel('y_{\phi_{estimated}}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            figure('Name','Simulation results single wavenet','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
-            
-            estimated = rad2deg(WNET.filterLayer.perfOutputs);
-            
-            subplot(3, 2, 1)
-                plot(trainingInputs,'k--','LineWidth',1)
-                ylabel('u_{\theta}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 3)
-                plot(targetOutputs,'r','LineWidth',1)
-                ylabel('y_{\theta}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 5)
-                plot(estimated(:,1),'r','LineWidth',1)
-                ylabel('y_{\theta_{estimated}}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 2)
-                plot(trainingInputs2,'k--','LineWidth',1)
-                ylabel('u_{\phi}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 4)
-                plot(targetOutputs2,'r','LineWidth',1)
-                ylabel('y_{\phi}')
-                xlabel('Samples, k')
-                xlim([1 samples])
-                
-            subplot(3, 2, 6)
-                plot(estimated(:,2),'r','LineWidth',1)
-                ylabel('y_{\phi_{estimated}}')
-                xlabel('Samples, k')
-                xlim([1 samples])
+                WNET.charts('compact');
+                figure('Name','Simulation results single wavenet','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+
+                estimated = WNET.getBehaviorApproximation();
+
+                subplot(3, 2, 1)
+                    plot(trainingInputs,'k--','LineWidth',1)
+                    ylabel('u_{\theta}')
+                    xlabel('Samples, k')
+                    xlim([1 samples])
+
+                subplot(3, 2, 3)
+                    hold on
+                    plot(targets(:,1),'LineWidth',1)
+                    plot(estimated(:,1),'LineWidth',1)
+                    legend('Target output','NNA Output');
+                    xlabel('Samples, k')
+                    xlim([1 samples])
+
+                subplot(3, 2, 5)
+                    hold on
+                    plot(wIdent(:,1),'r','LineWidth',1)
+                    plot(wIdent(:,2),'b:','LineWidth',1)
+                    legend('e_1','e_2');
+                    ylabel('Identification error')
+                    xlabel('Samples, k')
+                    xlim([1 samples])
+
+                subplot(3, 2, 2)
+                    plot(trainingInputs2,'k--','LineWidth',1)
+                    ylabel('u_{\phi}')
+                    xlabel('Samples, k')
+                    xlim([1 samples])
+
+                subplot(3, 2, 4)
+                    hold on
+                    plot(targets(:,2),'LineWidth',1)
+                    plot(estimated(:,2),'LineWidth',1)
+                    legend('Target output','NNA Output');
+                    xlabel('Samples, k')
+                    xlim([1 samples])
+
+                subplot(3, 2, 6)
+                    plot(wIdent(:,3),'r','LineWidth',1)
+                    ylabel('Cost function')
+                    xlabel('Samples, k')
+                    xlim([1 samples])
+            end
         end
     end
     

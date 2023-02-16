@@ -1,6 +1,6 @@
 classdef WavenetScheme < handle
     properties (Access = protected)
-        inputLayer, outputLayer {mustBeNumeric}
+        inputLayer, outputLayer, synapticRange {mustBeNumeric}
         synapticWeights, sWeightLearningRate {mustBeNumeric}
         inputs, outputs, numberSynapticWeights {mustBeInteger}
         perfSynapticWeights, perfWavenet {mustBeNumeric}
@@ -11,7 +11,6 @@ classdef WavenetScheme < handle
         setLearningRates();
         evaluate();
         update();
-        getOutput();
         getBehaviorApproximation();
         charts();
     end
@@ -70,6 +69,10 @@ classdef WavenetScheme < handle
             outputs = self.outputs;
         end
         
+        function setSynapticRange(self, range)
+            self.synapticRange = range;
+        end
+        
         function bootPerformance(self, samples)
             self.perfSynapticWeights = zeros(samples, self.outputs * self.hiddenNeuronLayer.getNeurons());
             self.perfWavenet = zeros(samples, self.outputs);
@@ -111,9 +114,13 @@ classdef WavenetScheme < handle
         function synapticWeights = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
-            value = 0.05;
+            if isempty(self.synapticRange)
+                value = 0.01;
+            else
+                value = self.synapticRange;
+            end
             
-            synapticWeights = randd(value, value, self.outputs, self.hiddenNeuronLayer.getNeurons());
+            synapticWeights = randd(value, -value, self.outputs, self.hiddenNeuronLayer.getNeurons());
         end
     end
 end

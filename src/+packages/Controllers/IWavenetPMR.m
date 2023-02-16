@@ -48,7 +48,7 @@ classdef IWavenetPMR < Controller
         %   @param {float} gamma Represents a wavenet parameter.
         %   @param {float} period Sampling period of the plant.
         %
-        function autotune(self, trackingError, identError, ~)
+        function autotune(self, trackingError, identificationError, Gamma)
             self.updateMemory(trackingError);
             
             deltaGains = zeros(1, self.level + 1);
@@ -56,7 +56,7 @@ classdef IWavenetPMR < Controller
             mu = self.updateRates;
             
             for i = 1:self.level + 1
-                deltaGains(i) = mu(i) * identError * (epsilon(1,i) - epsilon(2,i));
+                deltaGains(i) = mu(i) * identificationError * Gamma * (epsilon(1,i) - epsilon(2,i));
             end
             
             self.gains = abs(self.gains + deltaGains);
@@ -87,14 +87,14 @@ classdef IWavenetPMR < Controller
         %   @param {object} self Stands for instantiated object from this class.
         %   @param {string} title Indicates the name graph to show.
         %
-        function charts(self, title)
+        function charts(self, title, offset)
             figure('Name',title,'NumberTitle','off','units','normalized',...
                 'outerposition',[0 0 1 1]);
             
             items = length(self.performance(1,:));
             
             subplot(items, 1, 1)
-                plot(self.performance(:,1),'r','LineWidth',1)
+                plot(self.performance(:,1) + offset,'r','LineWidth',1)
                 ylabel('Control signal, u [V]')
                 
             for row = 2:items
@@ -118,12 +118,16 @@ classdef IWavenetPMR < Controller
             output = zeros(self.errorSamples, self.level + 1);
             rows = self.errorSamples - 1 : 1 : self.errorSamples;
             
-            [C,L] = wavedec(errorSignal, self.level, 'db2');
-            
-            output(:,1) = wrcoef('a', C, L, 'db2', self.level);
-            
-            for i = 2:self.level + 1
-                output(:,i) = wrcoef('d', C, L, 'db2', i-1);
+            try
+                [C,L] = wavedec(errorSignal, self.level, 'db2');
+
+                output(:,1) = wrcoef('a', C, L, 'db2', self.level);
+
+                for i = 2:self.level + 1
+                    output(:,i) = wrcoef('d', C, L, 'db2', i-1);
+                end
+            catch
+                return
             end
             
             self.eTrackingMemory = output(rows,:);

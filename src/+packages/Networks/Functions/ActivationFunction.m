@@ -183,9 +183,9 @@ classdef ActivationFunction < handle
         end
         
         function [scales, shifts] = getInitialValues(self)
-            temporal = 1;
-            scales = temporal .* ones(1,self.neurons);
-            shifts = temporal:temporal:temporal*self.neurons;
+            data = 1;
+            scales = data .* ones(1,self.neurons);
+            shifts = data:data:data*self.neurons;
         end
         
         function calculateTau(self, instant)

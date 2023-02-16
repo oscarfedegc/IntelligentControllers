@@ -78,6 +78,24 @@ classdef IRepositoryWNETIIRPMR < Repository
             self.writeParameterFile(derivatives, 'perfderivatives')
         end
         
+        function writeSynapticWeights(self, instants, labels)
+            idxs = self.indexes;
+            network = self.neuralNetwork;
+            synaptics = network.getPerfSynapticWeights();
+            instance = network.getHiddenNeuronLayer();
+            
+            outputs_ = network.getAmountOutputs();
+            neurons = instance.getNeurons();
+            
+            for i = 1:outputs_
+                cols = (i-1)*neurons + 1 : i*neurons;
+                data = [instants synaptics(idxs,cols)];
+                
+                self.writeParameterFile(data, ...
+                    sprintf('perfweights %s', string(labels(i))))
+            end
+        end
+        
         function writeFilterLayer(self, instants, labels)
             [perfFeedbacks, perfFeedforwards, perfGamma, perfRho, perfOutputs] = ...
                 self.neuralNetwork.filterLayer.getPerformance();
@@ -103,24 +121,6 @@ classdef IRepositoryWNETIIRPMR < Repository
                 perfRho(self.indexes,:), perfOutputs(self.indexes,:)];
             
             self.writeParameterFile(approximation, 'perfapprox')
-        end
-        
-        function writeSynapticWeights(self, instants, labels)
-            idxs = self.indexes;
-            network = self.neuralNetwork;
-            synaptics = network.getPerfSynapticWeights();
-            instance = network.getHiddenNeuronLayer();
-            
-            outputs_ = network.getAmountOutputs();
-            neurons = instance.getNeurons();
-            
-            for i = 1:outputs_
-                cols = [(i-1)*neurons + 1, i*neurons];
-                data = [instants synaptics(idxs,cols)];
-                
-                self.writeParameterFile(data, ...
-                    sprintf('perfweights %s', string(labels(i))))
-            end
         end
         
         function writeParameterFile(self, var, parameter)
