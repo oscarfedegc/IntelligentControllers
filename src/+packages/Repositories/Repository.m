@@ -54,26 +54,12 @@ classdef Repository < handle
             self.writeMetrics(metrics)
         end
 
-        function configuration = readConfiguration(self)            
+        function configuration = readConfiguration(self)
             configuration = readmatrix(self.configurationpath);
         end
         
         function writeMetrics(self, values)
-            metrics = {'ISE','IAE','IATE'};
-            tags = {'idf','trk'};
-            labels = self.model.getLabels();
-            
-            varnames = {'time'};
-            
-            for i = 1:length(labels)
-                for j = 1:length(metrics)
-                    for k = 1:length(tags)
-                        varnames = strcat(varnames, '-', cellstr(metrics(j)), cellstr(tags(k)), upper(cellstr(labels(i))));
-                    end
-                end
-            end
-            varnames = split(varnames(:),'-');
-            varnames = horzcat(varnames(2:length(varnames)))';
+            varnames = self.getMetricHeaders(2);
             
             T = array2table(values, 'VariableNames', varnames);
             writetable(T,[self.resultspath self.sku ' METRICS.csv'])
@@ -102,9 +88,9 @@ classdef Repository < handle
         function getFoldersName(self)
             self.getSKU()
             
-            self.configurationpath = sprintf('%s/%s-SETUP.csv',  self.CONFIGURATIONS, self.sku);
+            self.configurationpath = sprintf('%s%s-SETUP.csv',  self.CONFIGURATIONS, self.sku);
             self.valuespath = sprintf('%s/%s%s/', self.VALUES, self.FOLDER, self.sku);
-            self.resultspath = sprintf('%s/%s%s/', self.RESULTS, self.FOLDER, self.sku);
+            self.resultspath = sprintf('%s%s%s/', self.RESULTS, self.FOLDER, self.sku);
         end
 
         function getSKU(self)
@@ -200,6 +186,56 @@ classdef Repository < handle
             varnames = varnames(1);
             varnames = split(varnames(:),'-');
             varnames = horzcat(varnames(:))';
+        end
+
+        function varnames = getMetricHeaders(self, first)
+            metrics = {'ISE','IAE','IATE'};
+            tags = {'idf','trk'};
+            labels = self.model.getLabels();
+            
+            varnames = {'name'};
+            
+            for i = 1:length(labels)
+                for j = 1:length(metrics)
+                    for k = 1:length(tags)
+                        varnames = strcat(varnames, '-', cellstr(metrics(j)), cellstr(tags(k)), upper(cellstr(labels(i))));
+                    end
+                end
+            end
+            varnames = split(varnames(:),'-');
+            varnames = horzcat(varnames(first:length(varnames)))';
+        end
+    end
+
+    methods (Static)
+        function showMedataMetrics()
+            RESULTS = 'src/+repositories/results/WAVENET-IIR PMR';
+
+            queryDirectory = sprintf('%s', RESULTS);
+            queryFiles = dir(sprintf('%s/*/*METRICS.csv', queryDirectory));
+
+            items = size(queryFiles,1);
+            data = {};
+            sku_ = {};
+            varnames = [];
+
+            for item = 1:items
+                filename = queryFiles(item).name;
+                folder = split(filename,' ');
+                folder = folder(1);
+                info = readtable(sprintf('%s/%s/%s', RESULTS, string(folder), filename));
+                
+                if item == 1
+                    varnames = info.Properties.VariableNames;
+                end
+                data = [data; table2cell(info)];
+                sku_ = [sku_; cell(folder)];
+            end
+
+            varnames = [{'Configuration'}, varnames];
+            data = [sku_, data];
+            data = cell2table(data, 'VariableNames', varnames);
+            disp(data)
         end
     end
 end

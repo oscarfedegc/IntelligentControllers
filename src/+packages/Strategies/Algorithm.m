@@ -14,23 +14,23 @@ classdef Algorithm < handle
         end
         
         function setup(self)
-            self.algorithm.setup();
+            self.algorithm.setup()
         end
         
         function builder(self)
-            self.algorithm.builder();
+            self.algorithm.builder()
         end
         
         function execute(self)
-            self.algorithm.execute();
+            self.algorithm.execute()
         end
         
         function charts(self)
-            self.algorithm.charts();
+            self.algorithm.charts()
         end
         
         function writeCSV(self)
-            self.algorithm.writeCSV();
+            self.algorithm.writeCSV()
         end
     end
 end

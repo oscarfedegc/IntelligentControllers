@@ -48,6 +48,11 @@ classdef Strategy < handle
                 return
             end
             self.saveCSV();
+
+            population = self.trajectories.getSamples();
+            index = self.indexes;
+            fprintf('Sample = %06d, indexes = %02d therefore sample size = %06d\n', ...
+                population, index, round(population/index))
         end
         
         % This function calls a custom method to plot the behavior of the

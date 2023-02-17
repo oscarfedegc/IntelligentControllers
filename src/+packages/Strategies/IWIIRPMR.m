@@ -13,7 +13,7 @@ classdef IWIIRPMR < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 15; % Simulation time [sec]
+            self.tFinal = 60; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -55,11 +55,11 @@ classdef IWIIRPMR < Strategy
             self.outputs = 2;
             self.amountFunctions = 4;
             self.feedbacks = 4;
-            self.feedforwards = 4;
+            self.feedforwards = 2;
             self.persistentSignal = 1;
             
-            self.learningRates = [1e-4 1e-4 1e-6 1e-4 1e-4];
-            self.rangeSynapticWeights = 0.005;
+            self.learningRates = [1e-4 1e-4 1e-5 1e-4 1e-4];
+            self.rangeSynapticWeights = 0.05;
         end
         
         % This funcion calls the class to generates the objects for the simulation.
