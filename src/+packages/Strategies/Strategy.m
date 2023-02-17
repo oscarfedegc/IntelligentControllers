@@ -96,6 +96,7 @@ classdef Strategy < handle
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
+            wavenetoutputs = rad2deg(self.neuralNetwork.getBehaviorWavenet());
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             time = 0:self.period:self.tFinal;
@@ -123,6 +124,7 @@ classdef Strategy < handle
                 hold on
                 plot(time, measurement(:,item),'b:','LineWidth',1.5)
                 plot(time, approximation(:,item),'k-.','LineWidth',1)
+                plot(time, wavenetoutputs(:,item),'r-.','LineWidth',1)
                 xlabel(sprintf('Time, t [sec]'))
                 ylabel(sprintf('%s (y_{r_\\%s}, y_\\%s)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 lgd = legend(sprintf('y_{\\%s}', string(lbl(item))), ...

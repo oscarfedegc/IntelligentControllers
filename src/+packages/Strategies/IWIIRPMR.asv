@@ -41,8 +41,8 @@ classdef IWIIRPMR < Strategy
             self.controllerType = ControllerTypes.WavenetPMR;
             self.controllerGains = struct('pitch', [100 100 75 0 0 0], ...
                                             'yaw', [300 100 75 0 0 0]);
-            self.controllerRates = struct('pitch', 1e-2.*ones(1,6),...
-                                            'yaw', 1e-2.*ones(1,6));
+            self.controllerRates = struct('pitch', 1e-5.*ones(1,6),...
+                                            'yaw', 1e-5.*ones(1,6));
             self.pitchCtrlOffset = 12.5;
             self.yawCtrlOffset = -4.0;
             
@@ -53,13 +53,13 @@ classdef IWIIRPMR < Strategy
             
             self.inputs = 2;
             self.outputs = 2;
-            self.amountFunctions = 6;
+            self.amountFunctions = 4;
             self.feedbacks = 4;
             self.feedforwards = 2;
             self.persistentSignal = 0.01;
             
             self.learningRates = [1e-4 1e-4 1e-6 1e-3 1e-3];
-            self.rangeSynapticWeights = 0.05;
+            self.rangeSynapticWeights = 0.075;
         end
         
         % This funcion calls the class to generates the objects for the simulation.
