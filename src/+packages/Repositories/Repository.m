@@ -206,36 +206,4 @@ classdef Repository < handle
             varnames = horzcat(varnames(first:length(varnames)))';
         end
     end
-
-    methods (Static)
-        function showMedataMetrics()
-            RESULTS = 'src/+repositories/results/WAVENET-IIR PMR';
-
-            queryDirectory = sprintf('%s', RESULTS);
-            queryFiles = dir(sprintf('%s/*/*METRICS.csv', queryDirectory));
-
-            items = size(queryFiles,1);
-            data = {};
-            sku_ = {};
-            varnames = [];
-
-            for item = 1:items
-                filename = queryFiles(item).name;
-                folder = split(filename,' ');
-                folder = folder(1);
-                info = readtable(sprintf('%s/%s/%s', RESULTS, string(folder), filename));
-                
-                if item == 1
-                    varnames = info.Properties.VariableNames;
-                end
-                data = [data; table2cell(info)];
-                sku_ = [sku_; cell(folder)];
-            end
-
-            varnames = [{'Configuration'}, varnames];
-            data = [sku_, data];
-            data = cell2table(data, 'VariableNames', varnames);
-            disp(data)
-        end
-    end
 end
