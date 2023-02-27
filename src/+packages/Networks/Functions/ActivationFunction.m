@@ -1,7 +1,7 @@
 classdef ActivationFunction < handle
     properties (Access = protected)
         neurons {mustBeInteger}
-        scales, shifts, tau, funcOutput, dfuncOutput, learningRates {mustBeNumeric}
+        scales, shifts, tau, funcOutput, dfuncOutput {mustBeNumeric}
         perfScales, perfShifts, perfTau, perfFuncOutput, perfdfunOutput {mustBeNumeric}
     end
     
@@ -26,8 +26,8 @@ classdef ActivationFunction < handle
         end
         
         function update(self, scales, shifts)
-            self.scales = self.scales - self.learningRates(1).*scales;
-            self.shifts = self.shifts - self.learningRates(2).*shifts;
+            self.scales = scales;
+            self.shifts = shifts;
         end
         
         function charts(self)
@@ -71,14 +71,6 @@ classdef ActivationFunction < handle
         
         function setShifts(self, shifts)
             self.shifts = shifts;
-        end
-        
-        function rates = getLearningRates(self)
-            rates = self.learningRates;
-        end
-        
-        function setLearningRates(self, rates)
-            self.learningRates = rates;
         end
         
         function tau = getTau(self)

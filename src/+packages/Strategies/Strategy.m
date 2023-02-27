@@ -9,6 +9,7 @@ classdef Strategy < handle
         trajectories % {must be ITrajectories}
         repository % {must be IRepository}
         isSuccessfully % {must be Bolean}
+        isTraining % {must be Bolean}
     end
     
     properties (Access = protected)
@@ -21,10 +22,10 @@ classdef Strategy < handle
         functionType % {must be FuntionList}
         functionSelected % {must be WaveletList, WindowList or []}
         amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
-        learningRates, persistentSignal, initialStates {mustBeNumeric}
+        learningRates, learningBetas, persistentSignal, initialStates {mustBeNumeric}
         pitchCtrlOffset, yawCtrlOffset {mustBeNumeric}
         
-        fNormApprox, fNormErrors, indexes {mustBeNumeric}
+        fNormApprox, fNormErrors {mustBeNumeric}
         
         directory, filename % {must be String or path}
         metrics, rangeSynapticWeights {mustBeNumeric}
@@ -50,7 +51,7 @@ classdef Strategy < handle
             self.saveCSV();
 
             population = self.trajectories.getSamples();
-            index = self.indexes;
+            index = ISamplePopulation.getIndexes(population);
             fprintf('Sample = %06d, indexes = %02d therefore sample size = %06d\n', ...
                 population, index, round(population/index))
         end
@@ -96,7 +97,7 @@ classdef Strategy < handle
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
-            wavenetoutputs = rad2deg(self.neuralNetwork.getBehaviorWavenet());
+            wavenetoutputs = rad2deg(self.neuralNetwork.getBehaviorOutputs());
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             time = 0:self.period:self.tFinal;
@@ -173,6 +174,7 @@ classdef Strategy < handle
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
+            wavenetoutputs = rad2deg(self.neuralNetwork.getPerfWavenet());
             
             rows = 2;
             cols = length(desired(1,:));
@@ -204,14 +206,16 @@ classdef Strategy < handle
                 subplot(rows, cols, item + cols)
                 yyaxis left
                 hold on
-                plot(instants,measurement(:,item),'k','LineWidth',1.5)
+                plot(instants,measurement(:,item),'k','LineWidth',1)
                 plot(instants,approximation(:,item),'LineWidth',1)
+                plot(instants,wavenetoutputs(:,item),'LineWidth',1)
                 ylabel(sprintf('%s (y_{\\%s}, y_\\%s^\\Gamma)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 yyaxis right
                 plot(instants,identifError(:,item),'LineWidth',1)
                 ylabel(sprintf('e_\\%s', string(lbl(item))))
                 lgd = legend(sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
                     sprintf('Approximation, y_{\\%s}^\\Gamma', string(lbl(item))), ...
+                    sprintf('Wavenet, z_{\\%s}', string(lbl(item))), ...
                     sprintf('Identification error, e_{\\%s}', string(lbl(item))), ...
                     'Location','northoutside');
                 lgd.NumColumns = 3;
@@ -229,19 +233,17 @@ classdef Strategy < handle
             desired = rad2deg(self.trajectories.getAllReferences());
             measurement = rad2deg(self.model.getPerformance());
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
-            
-            trackingError = desired - measurement;
-            identifError = measurement - approximation;
-            T = self.period;
 
             self.metrics = [];
 
             for i = 1:2
-                self.metrics = [self.metrics, ...
-                    IMetrics.ISE(identifError(:,i),T), IMetrics.ISE(trackingError(:,i),T), ...
-                    IMetrics.IAE(identifError(:,i),T), IMetrics.IAE(trackingError(:,i),T), ...
-                    IMetrics.IATE(identifError(:,i),T), IMetrics.IATE(trackingError(:,i),T)];
-            end
+                temp = [IMetrics.R2(desired(:,i), measurement(:,i)), ...
+                        IMetrics.R2(measurement(:,i), approximation(:,i)); ...
+                        IMetrics.RMSE(desired(:,i), measurement(:,i)), ...
+                        IMetrics.RMSE(measurement(:,i), approximation(:,i))];
+                    
+                self.metrics = [self.metrics temp];
+            end            
         end
     end
 end

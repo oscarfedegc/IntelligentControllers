@@ -15,12 +15,45 @@ classdef IMetrics < handle
             end
             rst = sum(vector);
         end
+        
+        function rst = MSE(target, estimated)
+            difference = target - estimated;
+            rst = sum(difference.^2) / length(target);
+        end
+        
+        function rst = RMSE(target, estimated)            
+            rst = sqrt(IMetrics.MSE(target, estimated));
+        end
+        
+        function rst = SSE(val_target, val_estimated)
+            rst = sum((val_target - val_estimated).^2);
+        end
+        
+        function rst = SSY(val_target)
+            average = sum(val_target)/length(val_target);
+            rst = sum((val_target - average).^2);
+        end
+        
+        function rst = R2(val_target, val_estimated)
+            R2 = IMetrics.SSE(val_target, val_estimated) / IMetrics.SSY(val_target);
+            
+            rst = 1 - R2;
+        end
+        
+        function rst = R2ANN(val_target, val_estimated)
+            average = sum(val_target)/length(val_target);
+            
+            SSY = sum((val_target - average).^2);
+            SSX = sum((val_estimated - average).^2);
+            
+            rst = 1 - SSY/SSX;
+        end
 
         function showMedata()
             RESULTS = 'src/+repositories/results/WAVENET-IIR PMR';
 
             queryDirectory = sprintf('%s', RESULTS);
-            queryFiles = dir(sprintf('%s/*/*METRICS.csv', queryDirectory));
+            queryFiles = dir(sprintf('%s/*/*X METRICS.csv', queryDirectory));
 
             items = size(queryFiles,1);
             data = {};
@@ -37,7 +70,7 @@ classdef IMetrics < handle
                     varnames = info.Properties.VariableNames;
                 end
                 data = [data; table2cell(info)];
-                sku_ = [sku_; cell(folder)];
+                sku_ = [sku_; cell(folder); cell(folder)];
             end
 
             varnames = [{'Configuration'}, varnames];

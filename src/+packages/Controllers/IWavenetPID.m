@@ -8,7 +8,7 @@ classdef IWavenetPID < Controller
         %
         function self = IWavenetPID()
             self.signal = 0;
-            self.gains = rand(1,3);
+            self.gains = zeros(1,3);
             self.updateRates = zeros(1,3);
             self.eTrackingMemory = zeros(1,3);
         end

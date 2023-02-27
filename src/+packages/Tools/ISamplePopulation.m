@@ -13,7 +13,7 @@ classdef ISamplePopulation < handle
                 return
             end
 
-            marginError = 0.01;
+            marginError = 0.025;
             possibility = 0.5;
             alfa = 1.96; % Corresponds to NC = 95 percent
 

@@ -14,6 +14,7 @@ classdef Application < handle
             addpath ('src/+packages/Networks')
             addpath ('src/+packages/Networks/Filters')
             addpath ('src/+packages/Networks/Functions')
+            addpath ('src/+packages/Networks/Optimizer')
             addpath ('src/+packages/Plants')
             addpath ('src/+packages/Repositories')
             addpath ('src/+packages/Strategies')

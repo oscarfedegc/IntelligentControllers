@@ -6,6 +6,7 @@ classdef IRepositoryWNETIIRPMR < Repository
     methods (Access = public)
         function self = IRepositoryWNETIIRPMR(folder)
             self.FOLDER = upper(folder);
+            self.isCutOffResults = false;
         end
 
         function writeConfiguration(self)
@@ -17,9 +18,7 @@ classdef IRepositoryWNETIIRPMR < Repository
             feedbacks = self.neuralNetwork.filterLayer.getCoeffsM();
             forwards = self.neuralNetwork.filterLayer.getCoeffsN();
             pSignal = self.neuralNetwork.filterLayer.getPersistentSignal();
-            rates = [instance.getLearningRates() ...
-                self.neuralNetwork.getLearningRateWeigtht() ...
-                self.neuralNetwork.filterLayer.getLearningRates()];
+            rates = self.neuralNetwork.getLearningRates();
             gains = [];
 
             for i = 1:ctrls_
@@ -54,15 +53,13 @@ classdef IRepositoryWNETIIRPMR < Repository
             trackingError = trackingError(self.indexes,:);
             identifError = identifError(self.indexes,:);
             
-            filename_ = [self.resultspath self.sku ' PERFMODEL.csv'];
-            
             tags = {'ref', 'mes', 'est', 'epsilon', 'error'};
             labels = self.model.getLabels();
             
             T = [instants, desired, measurement, approximation, trackingError, identifError];
             T = array2table(T, 'VariableNames', self.getVarNames(tags, labels));
             
-            writetable(T, filename_)
+            self.writeParameterFile(T, 'PERFMODEL')
         end
         
         function  writeNeuralNetworkFiles(self)
@@ -89,7 +86,28 @@ classdef IRepositoryWNETIIRPMR < Repository
             end
         end
 
-        function writeFinalParameters(~)
+        function writeFinalParameters(self)
+            instance = self.neuralNetwork.getHiddenNeuronLayer();
+            
+            Scales = instance.getScales();
+            Shifts = instance.getShifts();            
+            Weights = self.neuralNetwork.getSynapticWeights();
+            Feedbacks = self.neuralNetwork.filterLayer.getFeedbacks();
+            Forwards = self.neuralNetwork.filterLayer.getFeedforwards();
+            
+            self.writeArrayParameterFile(Scales,'SCALES')
+            self.writeArrayParameterFile(Shifts,'SHIFTS')
+            self.writeArrayParameterFile(Weights,'WEIGHTS')
+            self.writeArrayParameterFile(Feedbacks,'FEEDBACKS')
+            self.writeArrayParameterFile(Forwards,'FORWARDS')
+        end
+        
+        function [scales, shifts, weights, feedbacks, feedforwards] = readParameters(self)
+            scales = self.readArrayParameterFile('SCALES');
+            shifts = self.readArrayParameterFile('SHIFTS');
+            weights = self.readArrayParameterFile('WEIGHTS');
+            feedbacks = self.readArrayParameterFile('FEEDBACKS');
+            feedforwards = self.readArrayParameterFile('FORWARDS');
         end
     end
     
@@ -155,13 +173,6 @@ classdef IRepositoryWNETIIRPMR < Repository
                 perfRho(self.indexes,:), perfOutputs(self.indexes,:)];
             
             self.writeParameterFile(approximation, 'PERFAPPROX')
-        end
-        
-        function writeParameterFile(self, var, parameter)
-            T = array2table(var);
-            filename = [self.resultspath self.sku ' ' parameter '.csv'];
-            
-            writetable(T, filename)
         end
     end
 end

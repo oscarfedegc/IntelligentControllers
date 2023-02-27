@@ -3,7 +3,7 @@
 classdef IFilter < handle
     properties (Access = public)
         feedbacks, feedforwards, oValues, persistentSignal {mustBeNumeric}
-        iMemory, oMemory, Gamma, Rho, learningRates {mustBeNumeric}
+        iMemory, oMemory, Gamma, Rho {mustBeNumeric}
         coeffsM, coeffsN, inputs, outputs {mustBeInteger}
         perfFeedbacks, perfFeedforwards, perfGamma, perfRho, perfOutputs {mustBeNumeric}
     end
@@ -51,10 +51,10 @@ classdef IFilter < handle
         %
         %   @param {float} iValues Indicates the array of input values.
         %
-        function evaluate(self, iValues)
-            self.updateIMemory(iValues);
+        function evaluate(self, iWavenet, iCtrlSignals)
+            self.updateIMemory(iWavenet);
             
-            gamma = diag(self.feedbacks * self.iMemory')' .* sum(iValues);
+            gamma = diag(self.feedbacks * self.iMemory')' .* sum(iCtrlSignals);
             rho = (diag(self.feedforwards * self.oMemory') .* self.persistentSignal)';
             
             self.Gamma = gamma;
@@ -85,8 +85,8 @@ classdef IFilter < handle
         %   @param {float} feedforwards Indicates the feedforwards gradient.
         %
         function update(self, feedbacks, feedforwards)
-            self.feedbacks = self.feedbacks - self.learningRates(1).*feedbacks;
-            self.feedforwards = self.feedforwards - self.learningRates(2).*feedforwards;
+            self.feedbacks = feedbacks;
+            self.feedforwards = feedforwards;
         end
         
         % Initializes the matrices to store the behavior of the filter parameters.
@@ -156,15 +156,7 @@ classdef IFilter < handle
     end
     
     % These funcions are the getters and setters for each parameter class.
-    methods (Access = public)
-        function setLearningRates(self, rates)
-            self.learningRates = rates;
-        end
-
-        function rates = getLearningRates(self)
-            rates = self.learningRates;
-        end
-        
+    methods (Access = public)        
         function setFeedbacks(self, feedbacks)
             self.feedbacks = feedbacks;
         end
@@ -230,11 +222,11 @@ classdef IFilter < handle
         function [feedbacks, feedforwards, pSignal] = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
-            value = 0.1;
+            value = 0.5;
             pSignal = 0.001;
             
-            feedbacks = randd(value,2*value,self.outputs,self.coeffsM);
-            feedforwards= zeros(self.outputs,self.coeffsN);
+            feedbacks = randd(-value,value,self.outputs,self.coeffsM);
+            feedforwards= randd(-value,value,self.outputs,self.coeffsN);
         end
         
         % Shows the behavior of the filter coefficients by means of a graph.

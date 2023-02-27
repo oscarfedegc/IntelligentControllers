@@ -1,18 +1,11 @@
-classdef IWavenetIIRScheme < WavenetScheme
-    properties (Access = public)
-        functionMemory, derivativeMemory {mustBeNumeric}
-        filterLayer % {must be ImplementFilters}
-    end
-    
+classdef IWavenetIIRScheme < WavenetIIRScheme
     methods (Access = public)
         function self = IWavenetIIRScheme()
-            return
+            self.optimizer = IOptimizer();
         end
         
         function setLearningRates(self, rates)
-            self.sWeightLearningRate = rates(3);
-            self.hiddenNeuronLayer.setLearningRates(rates(1:2))
-            self.filterLayer.setLearningRates(rates(4:5))
+            self.allLearningRates = rates;
         end
         
         function evaluate(self, instant, inputs)
@@ -20,23 +13,35 @@ classdef IWavenetIIRScheme < WavenetScheme
             self.setInputs(inputs);
             self.hiddenNeuronLayer.evaluate(instant);
             outputFunction = self.hiddenNeuronLayer.getFuncOutput();
-            temp = self.calculateNetworkOutput(inputs, outputFunction, self.synapticWeights);
+            tempWnet = self.calculateNetworkOutput(inputs, outputFunction, self.synapticWeights);
             
             % IIR Filter outputs
-            self.filterLayer.evaluate(temp);
-            temp = self.filterLayer.getOutputs();
+            self.filterLayer.evaluate(tempWnet, inputs);
+            tempIIR = self.filterLayer.getOutputs();
             
             % Setting final calculate
-            self.setNetworkOutputs(temp);
+            self.setWnetIIROutputs(tempWnet, tempIIR);
             self.updateInternalMemory();
         end
         
-        function update(self, inputs, identificationErrors)
-            [DeltaW, Deltaa, Deltab, DeltaC, DeltaD] = self.calculateGradients(inputs, identificationErrors);
+        function updateGradientDescent(self, inputs, identificationErrors)
+            [gradientW, gradienta, gradientb, gradientC, gradientD] = ...
+                self.calculateGradients(inputs, identificationErrors);
             
-            self.synapticWeights = self.synapticWeights - self.sWeightLearningRate .* DeltaW;
-            self.hiddenNeuronLayer.update(Deltaa, Deltab);
-            self.filterLayer.update(DeltaC, DeltaD);
+            scales = self.hiddenNeuronLayer.getScales();
+            shifts = self.hiddenNeuronLayer.getShifts();
+            weights = self.synapticWeights;
+            feedbacks = self.filterLayer.getFeedbacks();
+            forwards = self.filterLayer.getFeedforwards();
+            rl = self.allLearningRates;
+            
+            [scales,shifts,weights,feedbacks,forwards] = IOptimizer.GradientDescent( ...
+                scales,shifts,weights,feedbacks,forwards,...
+                gradienta, gradientb, gradientW, gradientC, gradientD, rl);
+            
+            self.synapticWeights = weights;
+            self.hiddenNeuronLayer.update(scales, shifts);
+            self.filterLayer.update(feedbacks, forwards);
         end
         
         function perfOutputs = getBehaviorApproximation(self)
@@ -61,6 +66,10 @@ classdef IWavenetIIRScheme < WavenetScheme
         
         function setFilterInitialValues(self, feedbacks, feedforwards, pSignal)
             self.filterLayer.initialize(feedbacks, feedforwards, pSignal);
+        end
+        
+        function setSynapticRange(self, range)
+            self.synapticRange = range;
         end
         
         function bootInternalMemory(self)
@@ -88,7 +97,8 @@ classdef IWavenetIIRScheme < WavenetScheme
             rst = 0.5 * sum(error .^ 2);
         end
         
-        function [DeltaW, Deltaa, Deltab, DeltaC, DeltaD] = calculateGradients(self, controlSignals, error)
+        function [GradientW, Gradienta, Gradientb, GradientC, GradientD] = ...
+                calculateGradients(self, controlSignals, error)
             U = sum(controlSignals);
             Ie = diag(error,0);
             If = error;
@@ -100,24 +110,16 @@ classdef IWavenetIIRScheme < WavenetScheme
             Y = self.filterLayer.oMemory;
             p = self.filterLayer.persistentSignal;
             
-            DeltaW = U .* Ie * C * A;
-            Deltab = U * If *(C * B);
-            Deltaa = Deltab .* tau;
-            DeltaC = U * Ie * Z;
-            DeltaD = p .* Ie * Y;
+            GradientW = U .* Ie * C * A;
+            Gradientb = U * If *(C * B);
+            Gradienta = Gradientb .* tau;
+            GradientC = U * Ie * Z;
+            GradientD = p .* Ie * Y;
         end
         
         function output = updateMatrix(~, matrix, newValues)
             [a,~] = size(matrix);
             output = [newValues; matrix(1:a-1,:)];
-        end
-        
-        function bootBehavior(self, samples)
-            self.filterLayer.bootPerformance(samples)
-        end
-        
-        function setBehavior(self, iteration)
-            self.filterLayer.setPerformance(iteration)
         end
         
         function synapticWeightsCharts(self)

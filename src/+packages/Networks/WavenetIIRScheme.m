@@ -1,21 +1,50 @@
 classdef WavenetIIRScheme < handle
     properties (Access = public)
-        inputLayer, outputNetworkLayer, filterOutputLayer {mustBeNumeric}
-        synapticWeights, sWeightLearningRate {mustBeNumeric}
-        inputs, outputs, numberSynapticWeights {mustBeInteger}
-        perfSynapticWeights, perfOutputNL {mustBeNumeric}
+        allLearningRates {mustBeNumeric}
+        outputIIRLayer, outputNetworkLayer {mustBeNumeric}
+        inputLayer, filterOutputLayer, inputs, outputs, numberSynapticWeights {mustBeNumeric}
+        synapticWeights, perfSynapticWeights, perfOutputNL {mustBeNumeric}
+        functionMemory, derivativeMemory, outputLayer, synapticRange, perfWavenet {mustBeNumeric}
         hiddenNeuronLayer % {must be AbstractActivationFunction}
         filterLayer % {must be ImplementFilters}
+        optimizer % {must be IOptimizer)
+        isTraining % {must be Boolean}
     end
     
     methods (Abstract = true)
         evaluate();
-        update();
-        getGamma();
-        plotSynapticWeights();
+        updateGradientDescent();
+        getBehaviorApproximation();
+    end
+    
+    methods (Abstract = true, Access = protected)
+        calculateNetworkOutput();
+        calculateCostFunction();
+        calculateGradients();
+        synapticWeightsCharts();
     end
     
     methods (Access = public)
+        function setStatus(self, isTraining)
+            if isTraining
+                self.isTraining = 'X';
+            else
+                self.isTraining = 'Y';
+            end
+        end
+        
+        function status = getStatus(self)
+            status = self.isTraining;
+        end
+        
+        function setLearningRates(self, rates)
+            self.allLearningRates = rates;
+        end
+        
+        function rates = getLearningRates(self)
+            rates = self.allLearningRates;
+        end
+        
         function charts(self)
             self.hiddenNeuronLayer.charts();
             self.filterLayer.charts();
@@ -26,26 +55,13 @@ classdef WavenetIIRScheme < handle
             self.inputLayer = values;
         end
         
-        function setSynapticWeights(self, weights)
-            self.synapticWeights = weights;
-        end
-        
         function weights = getSynapticWeights(self)
             weights = self.synapticWeights;
         end
         
-        function setLearningRates(self, rates)
-            self.sWeightLearningRate = rates(3);
-            self.hiddenNeuronLayer.setLearningRates(rates(1:2));
-            self.filterLayer.setLearningRates(rates(4:5));
-        end
-        
-        function setNetworkOutputs(self, values)
-            self.outputNetworkLayer = values;
-        end
-        
-        function values = getNetworkOutputs(self)
-            values = self.outputNetworkLayer;
+        function setWnetIIROutputs(self, WnetVals, IITVals)
+            self.outputIIRLayer = IITVals;
+            self.outputNetworkLayer = WnetVals;
         end
         
         function perf = getBehaviorNeuronNetwork(self)
@@ -53,22 +69,22 @@ classdef WavenetIIRScheme < handle
         end
         
         function outputs = getOutputs(self)
-            outputs = self.filterOutputLayer;
-        end
-        
-        function outputs = getBehaviorOutputs(self)
-            outputs = self.filterLayer.getPerformanceOutputs();
+            outputs = self.outputIIRLayer;
         end
         
         function [Gamma, Rho] = getApproximation(self)
             [Gamma, Rho] = self.filterLayer.getApproximation();
         end
         
-        function initPerformance(self, samples)
+        function instance = getHiddenNeuronLayer(self)
+            instance = self.hiddenNeuronLayer;
+        end
+        
+        function bootPerformance(self, samples)
             self.perfSynapticWeights = zeros(samples, self.outputs * self.hiddenNeuronLayer.getNeurons());
-            self.perfOutputNL = zeros(samples, self.outputs);
-            self.hiddenNeuronLayer.initPerformance(samples);
-            self.filterLayer.initPerformance(samples);
+            self.perfWavenet = zeros(samples, self.outputs);
+            self.hiddenNeuronLayer.bootPerformance(samples);
+            self.filterLayer.bootPerformance(samples);
         end
         
         function setPerformance(self, iteration)
@@ -76,9 +92,9 @@ classdef WavenetIIRScheme < handle
             for item = 1:length(cols)-1
             	self.perfSynapticWeights(iteration, cols(item)+1:cols(item+1)) = self.synapticWeights(item,:);
             end
-            self.perfOutputNL(iteration,:) = self.getNetworkOutputs();
+            self.perfWavenet(iteration,:) = self.outputNetworkLayer;
             self.hiddenNeuronLayer.setPerformance(iteration);
-            self.filterLayer.setPerformance(iteration);
+            self.filterLayer.setPerformance(iteration)
         end
         
         function buildNeuronLayer(self, functionType, functionSelected, neurons, inputs, outputs)
@@ -89,19 +105,56 @@ classdef WavenetIIRScheme < handle
             self.numberSynapticWeights = 0:self.hiddenNeuronLayer.getNeurons(): neurons*outputs;
             self.inputLayer = zeros(1,inputs);
             self.filterOutputLayer = zeros(1,outputs);
-            self.initialize(outputs, neurons);
+            self.initialize();
         end
         
         function setNeuronInitialValues(self, scales, shifts)
-            self.hiddenNeuronLayer.initialize(scales, shifts);
+            self.hiddenNeuronLayer.initialize(scales, shifts)
+        end
+        
+        function setInitialValues(self, scales, shifts, weights, feedbacks, feedforwards)
+            self.synapticWeights = weights;
+            self.hiddenNeuronLayer.initialize(scales, shifts)
+            self.filterLayer.update(feedbacks, feedforwards)
+        end
+        
+        function perf = getPerfSynapticWeights(self)
+            perf = self.perfSynapticWeights;
+        end
+        
+        function perf = getPerfWavenet(self)
+            perf = self.perfWavenet;
+        end
+        
+        function outputs = getAmountOutputs(self)
+            outputs = self.outputs;
+        end
+        
+        function setSynapticRange(self, range)
+            self.synapticRange = range;
+        end
+        
+        function bootOptimazer(self, neurons, outputs, coeffsM, coeffsN)
+            self.optimizer = IOptimizer(neurons, outputs, coeffsM, coeffsN);
         end
     end
     
     methods (Access = protected)
-        function initialize(self, neurons, outputs)
+        function initialize(self)
+            self.synapticWeights = self.getInitialValues();
+            self.hiddenNeuronLayer.initialize();
+        end
+        
+        function synapticWeights = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
-            self.setSynapticWeights(randd(-1,1,neurons,outputs));
+            if isempty(self.synapticRange)
+                value = 0.01;
+            else
+                value = self.synapticRange;
+            end
+            
+            synapticWeights = randd(value, -value, self.outputs, self.hiddenNeuronLayer.getNeurons());
         end
         
         function setOutputs(self, filterOutputLayer)

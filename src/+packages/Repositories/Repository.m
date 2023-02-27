@@ -5,6 +5,7 @@ classdef Repository < handle
         RESULTS = 'src/+repositories/results/';
         CONFIGURATIONS = 'src/+repositories/configurations/';
         VALUES = 'src/+repositories/values/';
+        TIME_LIMIT = 10;
     end
     
     % Theses functions must be implemented in all inherited classes.
@@ -14,8 +15,9 @@ classdef Repository < handle
         neuralNetwork % {must be NetworkScheme}
         trajectories % {must be ITrajectories}
         
-        configurationpath, valuespath, resultspath, sku % {must be String}
+        configurationpath, valuespath, resultspath, cutrstspath, skuResults, skuParams % {must be String}
         indexes {mustBeInteger}
+        isCutOffResults % {must be Boolean}
     end
     
     % Theses functions must be implemented in all inherited classes to
@@ -26,6 +28,7 @@ classdef Repository < handle
         writeNeuralNetworkFiles()
         writeControllerFiles()
         writeFinalParameters()
+        readParameters()
     end
     
     methods (Access = public)
@@ -45,8 +48,12 @@ classdef Repository < handle
             self.trajectories = trajectories;
         end
         
-        function write(self, variation, metrics)
-            self.setIndexes(variation)
+        function setCutOffResults(self, option)
+            self.isCutOffResults = option;
+            self.setIndexes()
+        end
+        
+        function write(self, metrics)
             self.setFolderPath()
             self.writeModelFiles()
             self.writeNeuralNetworkFiles()
@@ -62,9 +69,11 @@ classdef Repository < handle
             varnames = self.getMetricHeaders(2);
             
             T = array2table(values, 'VariableNames', varnames);
-            writetable(T,[self.resultspath self.sku ' METRICS.csv'])
-            disp(' ')
-            disp(T)
+            writetable(T,[self.resultspath self.skuResults ' METRICS.csv'])
+            
+            if ~self.isCutOffResults
+                disp(' '), disp(T)
+            end
         end
         
         function setFolderPath(self)
@@ -72,6 +81,10 @@ classdef Repository < handle
             
             if exist(self.resultspath,'dir') == 0
                 mkdir(self.resultspath)
+            end
+            
+            if exist(self.cutrstspath,'dir') == 0
+                mkdir(self.cutrstspath)
             end
 
             if exist(self.valuespath,'dir') == 0
@@ -88,13 +101,16 @@ classdef Repository < handle
         function getFoldersName(self)
             self.getSKU()
             
-            self.configurationpath = sprintf('%s%s-SETUP.csv',  self.CONFIGURATIONS, self.sku);
-            self.valuespath = sprintf('%s/%s%s/', self.VALUES, self.FOLDER, self.sku);
-            self.resultspath = sprintf('%s%s%s/', self.RESULTS, self.FOLDER, self.sku);
+            self.configurationpath = sprintf('%s%s-SETUP.csv',  self.CONFIGURATIONS, self.skuResults);
+            self.valuespath = sprintf('%s/%s%s/', self.VALUES, self.FOLDER, self.skuParams);
+            self.resultspath = sprintf('%s%s%s/', self.RESULTS, self.FOLDER, self.skuResults);
+            self.cutrstspath = sprintf('%s%s%s-C010/', self.RESULTS, self.FOLDER, self.skuResults);
         end
 
         function getSKU(self)
             instance = self.neuralNetwork.getHiddenNeuronLayer();
+            status = self.neuralNetwork.getStatus();
+            
             switch class(instance)
                 case 'IWavelet'
                     name = string((instance.wavelet));
@@ -131,11 +147,24 @@ classdef Repository < handle
                 temp = sprintf('/%s-J%02d', name, neurons);
             end
 
-            self.sku = upper(sprintf('%s-%s%02d-T%04d', temp, var, gains-fixed, finalTime));
+            self.skuParams = upper(sprintf('%s', temp));
+            self.skuResults = upper(sprintf('%s-%s%02d-T%04d-%s', temp, var, gains-fixed, finalTime, status));
         end
 
-        function setIndexes(self, variation)
-            self.indexes = 1:variation:self.trajectories.getSamples();
+        function setIndexes(self)
+            samples = self.trajectories.getSamples();
+            tFinal = self.trajectories.getInstants();
+            tFinal = tFinal(samples);
+            
+            if self.isCutOffResults
+                if self.TIME_LIMIT > tFinal
+                    self.TIME_LIMIT = tFinal;
+                end
+                self.indexes = 1:2:round(self.TIME_LIMIT/self.model.getPeriod());
+            else
+                variation = ISamplePopulation.getIndexes(samples);
+                self.indexes = 1:variation:samples;
+            end
         end
         
         function writeTableFile(~, matrix, directory, filename, parameter)
@@ -189,8 +218,8 @@ classdef Repository < handle
         end
 
         function varnames = getMetricHeaders(self, first)
-            metrics = {'ISE','IAE','IATE'};
-            tags = {'idf','trk'};
+            metrics = {'R2'};
+            tags = {'trk','idf'};
             labels = self.model.getLabels();
             
             varnames = {'name'};
@@ -204,6 +233,32 @@ classdef Repository < handle
             end
             varnames = split(varnames(:),'-');
             varnames = horzcat(varnames(first:length(varnames)))';
+        end
+        
+        function writeParameterFile(self, data, parameter)
+            if isa(data,'table')
+                T = data;
+            else
+                T = array2table(data);
+            end
+            
+            if self.isCutOffResults
+                filename = [self.cutrstspath self.skuResults ' ' parameter '.csv'];
+            else
+                filename = [self.resultspath self.skuResults ' ' parameter '.csv'];
+            end
+            
+            writetable(T, filename)
+        end
+        
+        function writeArrayParameterFile(self, data, parameter)
+            filename = [self.VALUES self.FOLDER self.skuParams self.skuParams ' ' parameter '.csv'];
+            writematrix(data, filename)
+        end
+        
+        function data = readArrayParameterFile(self, parameter)
+            filename = [self.VALUES self.FOLDER self.skuParams self.skuParams ' ' parameter '.csv'];
+            data = load(filename);
         end
     end
 end

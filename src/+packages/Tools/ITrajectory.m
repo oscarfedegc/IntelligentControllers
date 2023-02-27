@@ -1,7 +1,7 @@
 % Class for generating reference trajectories
 classdef ITrajectory < handle
     properties (Access = protected)
-        instants, positions {mustBeNumeric}
+        instants, positions, period {mustBeNumeric}
         samples {mustBeInteger}
     end
     
@@ -17,6 +17,7 @@ classdef ITrajectory < handle
             self.samples = round(tFinal/period);
             self.instants = linspace(0, tFinal, self.samples)';
             self.positions = [];
+            self.period = period;
         end
         
         %{
@@ -38,6 +39,10 @@ classdef ITrajectory < handle
             end
            
             self.newTrajectory(references);
+        end
+        
+        function addPositions(self, references, times)
+            self.newPosition(references, times);
         end
     end
     
@@ -94,6 +99,33 @@ classdef ITrajectory < handle
                 t = self.instants(start:finish);
                 
                 temp(start:finish) = self.segment(t, references(idx), references(idx+1));
+            end
+            
+            self.positions = [self.positions temp];
+        end
+        
+        %{
+        %   This function converts the reference point in polynomial trajectories
+        %
+        %   @param {object} self Instation of the class.
+        %   @param {array<float>} references Reference positions for all trajectory.
+        %}
+        function newPosition(self, references, times)
+            references = deg2rad(references);
+            temp = zeros(self.samples, 1);
+            times = [0 times] ./ self.period;
+            
+            % Calculating intervals for the equation's cases
+            intervals = length(times);
+            
+            % Calculating the angles positions about the axis
+            for idx = 1:intervals - 1
+                start = times(idx) + 1;
+                finish = times(idx + 1);
+                
+                t = self.instants(start:finish);
+                
+                temp(start:finish) = references(idx);
             end
             
             self.positions = [self.positions temp];
