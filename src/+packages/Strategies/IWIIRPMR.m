@@ -32,34 +32,37 @@ classdef IWIIRPMR < Strategy
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.morlet;
+            self.functionSelected = WaveletList.polywog3;
             
             self.inputs = 2;
             self.outputs = 2;
             self.amountFunctions = 6;
             self.feedbacks = 4;
             self.feedforwards = 2;
-            self.persistentSignal = 50;
+            self.persistentSignal = 100;
             
-            self.learningRates = [1e-5 1e-10 5e-6 5e-3 5e-5];
+            self.learningRates = [1e-5 1e-6 5e-6 5e-3 5e-4];
             self.rangeSynapticWeights = 0.001;
             
             % Training status
-            self.isTraining = true;
+            self.isTraining = false;
             
             % Trajectory parameters (positions in degrees)
             if self.isTraining
                 trajectorySelected = 2;
             else
-                trajectorySelected = 2;
+                trajectorySelected = 1;
             end
             
             switch trajectorySelected
-                otherwise
-                    self.references = struct('pitch',  [20 20 20 20 20 20], ...
-                                             'yaw',    [10 10 10 10 10],...
-                                             'tpitch', [ 5 15 20 40 50 60],...
-                                             'tyaw',   [ 1 25 40 50 60]);
+                case 1
+                    self.references = struct('pitch',  [-40 40 40 40 -20 -20 -40], ...
+                                             'yaw',    [0 -40 -40 40 40 0]);
+                case 2
+                    self.references = struct('pitch',  [5 0 0 -5 -10 -10 -10 -10 0 5 5 0], ...
+                                             'yaw',    [0 0 5 5 5 0 -5 -10 0 0 5 0],...
+                                             'tpitch', 5:5:self.tFinal,...
+                                             'tyaw',   5:5:self.tFinal);
             end
         end
         
@@ -67,8 +70,14 @@ classdef IWIIRPMR < Strategy
         function builder(self)
             % Building the trajectories
             self.trajectories = ITrajectory(self.tFinal, self.period);
-            self.trajectories.addPositions(self.references.pitch, self.references.tpitch)
-            self.trajectories.addPositions(self.references.yaw, self.references.tyaw)
+            
+            if self.isTraining
+                self.trajectories.addPositions(self.references.pitch, self.references.tpitch)
+                self.trajectories.addPositions(self.references.yaw, self.references.tyaw)
+            else
+                self.trajectories.add(self.references.pitch)
+                self.trajectories.add(self.references.yaw)
+            end
             
             % Bulding the plant
             samples = self.trajectories.getSamples();
