@@ -1,2 +1,2 @@
 neurons,feedbacks,feedforwards,persistent,pitch1,pitch2,pitch3,pitch4,pitch5,pitch6,yaw1,yaw2,yaw3,yaw4,yaw5,yaw6,scaleRate,shiftRate,synapticRate,feedbackRate,forwardRate,pitchRate1,pitchRate2,pitchRate3,pitchRate4,pitchRate5,pitchRate6,yawRate1,yawRate2,yawRate3,yawRate4,yawRate5,yawRate6
-6,4,2,0.001,100,100,75,0,0,0,300,100,75,0,0,0,1e-05,1e-06,5e-06,0.005,0.0005,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01
+6,4,2,0.001,100,100,75,0,0,0,300,100,75,0,0,0,5e-07,1e-06,1e-10,0.5,0.005,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01

@@ -76,6 +76,7 @@ classdef IRepositoryWNETIIRPMR < Repository
             instants = self.trajectories.getInstants();
             instants = instants(self.indexes);
             labels = self.model.getLabels();
+            offsets = [12.5 -4];
             
             for i = 1:length(self.controllers)
                 performance = self.controllers(i).getPerformance();
@@ -157,7 +158,7 @@ classdef IRepositoryWNETIIRPMR < Repository
             amountM = self.neuralNetwork.filterLayer.coeffsN;
             
             for i = 1:outputs_
-                cols = [(i-1)*amountN + 1, i*amountN];
+                cols = [(i-1)*amountN + 1: i*amountN];
                 feedbacks_ = [instants perfFeedbacks(self.indexes,cols)];
                 
                 cols = [(i-1)*amountM + 1, i*amountM];

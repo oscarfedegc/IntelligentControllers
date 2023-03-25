@@ -41,17 +41,17 @@ classdef IWIIRPMR < Strategy
             self.feedforwards = 2;
             self.persistentSignal = 100;
             
-            self.learningRates = [1e-5 1e-6 5e-6 5e-3 5e-4];
+            self.learningRates = [5e-7 1e-6 1e-10 5e-1 5e-3];
             self.rangeSynapticWeights = 0.001;
             
             % Training status
-            self.isTraining = false;
+            self.isTraining = true;
             
             % Trajectory parameters (positions in degrees)
             if self.isTraining
-                trajectorySelected = 2;
-            else
                 trajectorySelected = 1;
+            else
+                trajectorySelected = 2;
             end
             
             switch trajectorySelected
@@ -72,11 +72,11 @@ classdef IWIIRPMR < Strategy
             self.trajectories = ITrajectory(self.tFinal, self.period);
             
             if self.isTraining
-                self.trajectories.addPositions(self.references.pitch, self.references.tpitch)
-                self.trajectories.addPositions(self.references.yaw, self.references.tyaw)
-            else
                 self.trajectories.add(self.references.pitch)
                 self.trajectories.add(self.references.yaw)
+            else
+                self.trajectories.addPositions(self.references.pitch, self.references.tpitch)
+                self.trajectories.addPositions(self.references.yaw, self.references.tyaw)
             end
             
             % Bulding the plant

@@ -6,9 +6,9 @@ classdef WindowList < int32
         flattop4 (4)
         flattop5 (5)
         flattop6 (6)
-%         hanning (7)
-%         hamming (8)
-%         blackman (9)
-%         blackman_harris (10)
+        hanning (7)
+        hamming (8)
+        blackman (9)
+        blackman_harris (10)
     end
 end

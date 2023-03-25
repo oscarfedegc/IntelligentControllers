@@ -99,7 +99,6 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
         
         function [GradientW, Gradienta, Gradientb, GradientC, GradientD] = ...
                 calculateGradients(self, controlSignals, error)
-            U = sum(controlSignals);
             Ie = diag(error,0);
             If = error;
             tau = self.hiddenNeuronLayer.getTau();
@@ -110,10 +109,10 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             Y = self.filterLayer.oMemory;
             p = self.filterLayer.persistentSignal;
             
-            GradientW = U .* Ie * C * A;
-            Gradientb = U * If *(C * B);
+            GradientW = sum(controlSignals) * sum(error) * C * A;
+            Gradientb = sum(controlSignals) * If *(C * B);
             Gradienta = Gradientb .* tau;
-            GradientC = U * Ie * Z;
+            GradientC = sum(controlSignals) * Ie * Z;
             GradientD = p .* Ie * Y;
         end
         
