@@ -1,15 +1,7 @@
 % This class that calls the other classes and generates the simulations
 classdef IWIIRPID < Strategy
-    properties (Access = private)
-%         plantType % {must be PlantList}
-%         controllerType % {must be ControllerTypes}
-%         references, controllerGains, controllerRates % {must be Structure}
-%         
-%         nnaType % {must be NetworkList}
-%         functionType % {must be FuntionList}
-%         functionSelected % {must be WaveletList, WindowList or []}
-%         amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
-%         learningRates, persistentSignal, initialStates {mustBeNumeric}
+    properties (Access = public)
+        PREFIX = 'WaveNet-IIR PID'; % It is use to create the folder and output files
     end
     
     methods (Access = public)
@@ -21,57 +13,87 @@ classdef IWIIRPID < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 10;        % Simulation time [sec]
+            self.tFinal = 20; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
-            self.period = 0.005;     % Plant sampling period [sec]
-            self.initialStates = [-40 0 0 0];
-            
-            % Trajectory parameters (positions in degrees)
-            self.references = struct('pitch', [0 0 10 10 10 0 0], ...
-                                     'yaw', [0 0 -20 -20 0 0 20 10 10 0 0]);
-            
+            self.period = 0.005; % Plant sampling period [sec]
+            self.initialStates = [0 0 0 0];
+
             % Controller parameters
-            self.controllerType = ControllerTypes.PID;
-            self.controllerGains = struct('pitch', [10 .1 10], 'yaw', [.1 0 .1]);
-            self.controllerRates = struct('pitch', [0 0 0], 'yaw', [0 0 0]);
+            self.controllerType = ControllerTypes.WavenetPID;
+            self.controllerGains = struct('pitch', [150, 0.001, 75], ...
+                                            'yaw', [140, 0.001, 60]);
+            self.controllerRates = struct('pitch', 1e-2.*zeros(1,3),...
+                                            'yaw', 1e-2.*zeros(1,3));
+            self.pitchCtrlOffset = 12.5;
+            self.yawCtrlOffset = -4.0;
             
             % Wavenet-IIR parameters
-            self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.rasp2;
-            self.amountFunctions = 3;
-            
-            self.feedbacks = 4;
-            self.feedforwards = 5;
-            self.persistentSignal = 1e-3;
-            
             self.nnaType = NetworkList.WavenetIIR;
+            self.functionType = FunctionList.window;
+            self.functionSelected = WindowList.flattop2;
+            
             self.inputs = 2;
             self.outputs = 2;
+            self.amountFunctions = 6;
+            self.feedbacks = 4;
+            self.feedforwards = 2;
+            self.persistentSignal = 3.36e-10;
             
-            self.learningRates = [1e-10, 1e-10, 1e-10, 1e-10, 1e-10];
+            self.learningRates = [10e-12 10e-12 10e-12 10e-12 10e-12];
+            self.rangeSynapticWeights = 0.001;
+            
+            % Training status
+            self.isTraining = true;
+            
+            % Trajectory parameters (positions in degrees)
+            if self.isTraining
+                trajectorySelected = 1;
+            else
+                trajectorySelected = 2;
+            end
+            
+            switch trajectorySelected
+                case 1
+                    self.references = struct('pitch',  [-30 30 30 30 -15 -15 -20], ...
+                                             'yaw',    [0 -20 -20 20 20 0]);
+                case 2
+                    self.references = struct('pitch',  [5 0 0 -5 -10 -10 -10 -10 0 5 5 0], ...
+                                             'yaw',    [0 0 5 5 5 0 -5 -10 0 0 5 0],...
+                                             'tpitch', 5:5:self.tFinal,...
+                                             'tyaw',   5:5:self.tFinal);
+            end
         end
         
         % This funcion calls the class to generates the objects for the simulation.
         function builder(self)
             % Building the trajectories
             self.trajectories = ITrajectory(self.tFinal, self.period);
-            self.trajectories.add(self.references.pitch)
-            self.trajectories.add(self.references.yaw)
+            
+            if self.isTraining
+                self.trajectories.add(self.references.pitch)
+                self.trajectories.add(self.references.yaw)
+            else
+                self.trajectories.addPositions(self.references.pitch, self.references.tpitch)
+                self.trajectories.addPositions(self.references.yaw, self.references.tyaw)
+            end
             
             % Bulding the plant
             samples = self.trajectories.getSamples();
             
+            self.fNormApprox = zeros(samples, 2);
+            self.fNormErrors = zeros(samples, 2);
+            
             self.model = PlantFactory.create(self.plantType);
             self.model.setPeriod(self.period);
-            self.model.setInitialStates(samples, deg2rad(self.initialStates))
+            self.model.setInitialStates(samples + 1, deg2rad(self.initialStates))
             
             % Building the pitch controller            
             pitchController = ControllerFactory.create(self.controllerType);
             pitchController.setGains(self.controllerGains.pitch)
-            pitchController.setUpdateRates(self.controllerRates.pitch);
-            pitchController.initPerformance(samples);
+            pitchController.setUpdateRates(self.controllerRates.pitch)
+            pitchController.initPerformance(samples)
             
             % Buildin the yaw controller
             yawController = ControllerFactory.create(self.controllerType);
@@ -83,23 +105,42 @@ classdef IWIIRPID < Strategy
             
             % Building the Wavenet-IIR
             self.neuralNetwork = NetworkFactory.create(self.nnaType);
+            self.neuralNetwork.setSynapticRange(self.rangeSynapticWeights)
             self.neuralNetwork.buildNeuronLayer(self.functionType, ...
-                self.functionSelected, self.amountFunctions, self.inputs, self.outputs);
+                self.functionSelected, self.amountFunctions, self.inputs, self.outputs)
             self.neuralNetwork.buildFilterLayer(self.inputs, self.feedbacks, ...
-                self.feedforwards, self.persistentSignal);
-            self.neuralNetwork.setLearningRates(self.learningRates);
-            self.neuralNetwork.initInternalMemory();
-            self.neuralNetwork.initPerformance(samples);
+                self.feedforwards, self.persistentSignal)
+            self.neuralNetwork.setLearningRates(self.learningRates)
+            self.neuralNetwork.bootInternalMemory()
+            self.neuralNetwork.bootPerformance(samples)
+            self.neuralNetwork.setStatus(self.isTraining)
+            
+            % Buildind the repository
+            self.repository = IRepositoryWNETIIRPMR(self.PREFIX);
+            
+            self.repository.setModel(self.model)
+            self.repository.setControllers(self.controllers)
+            self.repository.setNeuralNetwork(self.neuralNetwork)
+            self.repository.setTrajectories(self.trajectories)
+            self.repository.setFolderPath()
+            
+            % Execute this part with ANN was trained
+            if ~self.isTraining
+                [scales, shifts, weights, feedbacks, feedforwards] = self.repository.readParameters();
+                self.neuralNetwork.setInitialValues(scales, shifts, weights, feedbacks, feedforwards)
+            end
         end
         
         % Executes the algorithm.
         function execute(self)
+            self.repository.writeConfiguration()
+
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);
                 
-                up = self.controllers(1).getSignal();
-                uy = self.controllers(2).getSignal();
+                up = self.controllers(1).getSignal() + self.pitchCtrlOffset;
+                uy = self.controllers(2).getSignal() + self.yawCtrlOffset;
                 u = [up uy];
                 
                 self.neuralNetwork.evaluate(kT, u)
@@ -107,33 +148,45 @@ classdef IWIIRPID < Strategy
                 yMes = self.model.measured(u, iter);
                 yEst = self.neuralNetwork.getOutputs();
                 Gamma = self.neuralNetwork.filterLayer.getGamma();
-                
+
                 eTracking = yRef - yMes;
                 eIdentification = yMes - yEst;
                 
-                self.neuralNetwork.update(u, eIdentification)
+                if isnan(eTracking(1)) || isnan(eTracking(2)) || ...
+                        isnan(eIdentification(1)) || isnan(eIdentification(2))
+                    self.isSuccessfully = false;
+                    break
+                end
+                
+                self.neuralNetwork.setPerformance(iter)
+                self.controllers(1).setPerformance(iter)
+                self.controllers(2).setPerformance(iter)
+                
+                self.neuralNetwork.updateGradientDescent(u, eIdentification)
                 
                 self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
                 self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
                 self.controllers(1).evaluate()
                 self.controllers(2).evaluate()
-
-                self.neuralNetwork.setPerformance(iter)
-                self.controllers(1).setPerformance(iter)
-                self.controllers(2).setPerformance(iter)
                 
-                self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u)
+                self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u, Gamma, self.isTraining)
             end
+            self.setMetrics()
         end
         
         function saveCSV(self)
+            self.repository.writeFinalParameters()
+            self.repository.setCutOffResults(false)
+            self.repository.write(self.metrics)
+            self.repository.setCutOffResults(true)
+            self.repository.write(self.metrics)
         end
         
-        function charts(self)
-            self.neuralNetwork.charts()
-            self.controllers(1).charts('Pitch controller')
-            self.controllers(2).charts('Yaw controller')
-            self.plotting(self.fNormApprox);
+        function showCharts(self)
+            self.neuralNetwork.charts('noncompact')
+            self.controllers(1).charts('Pitch controller', self.pitchCtrlOffset)
+            self.controllers(2).charts('Yaw controller', self.yawCtrlOffset)
+            self.plotting()
         end
     end
     
@@ -142,13 +195,19 @@ classdef IWIIRPID < Strategy
         %
         %   @param {float} kT Instant of the time.
         %
-        function log(~, kT, reference, measured, estimated, tracking, identification, control)
+        function log(self, kT, reference, measured, estimated, tracking, identification, control, gamma, training)
             clc
-            fprintf(' :: PID CONTROLLER ::\n TIME >> %6.3f seconds \n', kT);
-            fprintf('PITCH >> yr = %+6.4f   ym = %+6.3f   ye = %+6.4f   et = %+6.4f   ei = %+6.4f   u = %+6.3f\n', ...
-                reference(1), measured(1), estimated(1), tracking(1), identification(1), control(1))
-            fprintf('  YAW >> yr = %+6.4f   ym = %+6.3f   ye = %+6.4f   et = %+6.4f   ei = %+6.4f   u = %+6.3f\n', ...
-                reference(2), measured(2), estimated(2), tracking(2), identification(2), control(2))
+            reference = rad2deg(reference);
+            measured = rad2deg(measured);
+            estimated = rad2deg(estimated);
+            tracking = rad2deg(tracking);
+            identification = rad2deg(identification);
+            
+            fprintf(' :: %s CONTROLLER ::\n TIME >> %10.3f seconds \n', self.PREFIX, kT);
+            fprintf('PITCH >> yRef = %+010.4f   yMes = %+010.4f   yEst = %+010.4f   eTck = %+010.4f   eIdf = %+010.4f   signal = %+010.4f   gamma = %+010.4f   %d\n', ...
+                reference(1), measured(1), estimated(1), tracking(1), identification(1), control(1), gamma(1), training)
+            fprintf('  YAW >> yRef = %+010.4f   yMes = %+010.4f   yEst = %+010.4f   eTck = %+010.4f   eIdf = %+010.4f   signal = %+010.4f   gamma = %+010.4f   %d\n', ...
+                reference(2), measured(2), estimated(2), tracking(2), identification(2), control(2), gamma(2), training)
         end
     end
 end

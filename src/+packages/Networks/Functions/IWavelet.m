@@ -18,18 +18,20 @@ classdef IWavelet < ActivationFunction
         function evaluateFunction(self)
             switch self.wavelet
                 case WaveletList.morlet
-                    self.morlet();
+                    self.morlet()
                 case WaveletList.shannon
-                    self.shannon();
+                    self.shannon()
                 case WaveletList.mexicanHat
-                    self.mexicanHat();
+                    self.mexicanHat()
+                case WaveletList.gaussian
+                    self.gaussian()
                 otherwise
                     if self.wavelet >= WaveletList.rasp1 && ...
                             self.wavelet <= WaveletList.rasp3
-                        self.rasp();
+                        self.rasp()
                     elseif self.wavelet >= WaveletList.polywog1 && ...
                             self.wavelet <= WaveletList.polywog5
-                        self.polywog();
+                        self.polywog()
                     end
             end
         end
@@ -102,6 +104,15 @@ classdef IWavelet < ActivationFunction
             a = self.shifts;
             
             self.funcOutput = (sin(2*pi.*t) - sin(pi.*t))./(pi.*t);
+            self.dfuncOutput = (-2*pi.*t.*cos(2*pi.*t) + pi.*t.*cos(pi.*t) + sin(2*pi.*t) - sin(pi.*t)) .* pi ./ (pi.*a).^2;
+        end
+        
+        function gaussian(self)
+            t = self.tau;
+            a = self.shifts;
+            b = self.scales;
+            
+            self.funcOutput = exp((t-a)./(2*b.^2));
             self.dfuncOutput = (-2*pi.*t.*cos(2*pi.*t) + pi.*t.*cos(pi.*t) + sin(2*pi.*t) - sin(pi.*t)) .* pi ./ (pi.*a).^2;
         end
     end

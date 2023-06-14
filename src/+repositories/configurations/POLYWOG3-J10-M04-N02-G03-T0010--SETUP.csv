@@ -1,0 +1,2 @@
+neurons,feedbacks,feedforwards,persistent,x pos1,x pos2,x pos3,y pos1,y pos2,y pos3,altitude1,altitude2,altitude3,scaleRate,shiftRate,synapticRate,feedbackRate,forwardRate,x posRate1,x posRate2,x posRate3,y posRate1,y posRate2,y posRate3,altitudeRate1,altitudeRate2,altitudeRate3
+10,4,2,0.001,0,0,0,0,0,0,1,0,0,1e-05,1e-05,1e-05,1e-05,1e-05,0,0,0,0,0,0,0,0,0

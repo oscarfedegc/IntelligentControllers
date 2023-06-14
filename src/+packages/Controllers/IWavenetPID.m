@@ -68,27 +68,22 @@ classdef IWavenetPID < Controller
         %
         %   @param {string} title Indicates the name graph to show.
         %
-        function charts(self, title)
+        function charts(self, title, offset)
             figure('Name',title,'NumberTitle','off','units','normalized',...
                 'outerposition',[0 0 1 1]);
             
-            tag = {'Proportional'; 'Integral'; 'Derivative'};
-            subs = {'p'; 'i'; 'd'};
-            samples = length(self.performance(:,1));
-            
             items = length(self.performance(1,:));
-            for row = 1:items - 1
+            
+            subplot(items, 1, 1)
+                plot(self.performance(:,1) + offset,'r','LineWidth',1)
+                ylabel('Control signal, u [V]')
+                
+            for row = 2:items
                 subplot(items, 1, row)
                 plot(self.performance(:,row),'r','LineWidth',1)
-                ylabel(sprintf('%s, K_{%s}', string(tag(row)), string(subs(row))))
-                xlim([1 samples])
+                ylabel(sprintf('K_{P_%i}', row))
             end
-            
-            subplot(items, 1, items)
-                plot(self.performance(:,items),'r','LineWidth',1)
-                ylabel('Control signal, u [V]')
-                xlabel('Samples, k')
-                xlim([1 samples])
+            xlabel('Samples, k')
         end
     end
     

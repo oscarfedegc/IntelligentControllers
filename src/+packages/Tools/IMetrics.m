@@ -8,7 +8,7 @@ classdef IMetrics < handle
             rst = sum(period .* abs(vector));
         end
         
-        function rst = IATE(vector, period)            
+        function rst = IATE(vector, period)
             for i = 1:length(vector)
                 k = i-1;
                 vector(i) = period * k * abs(vector(i));
@@ -21,7 +21,7 @@ classdef IMetrics < handle
             rst = sum(difference.^2) / length(target);
         end
         
-        function rst = RMSE(target, estimated)            
+        function rst = RMSE(target, estimated)
             rst = sqrt(IMetrics.MSE(target, estimated));
         end
         
@@ -49,11 +49,12 @@ classdef IMetrics < handle
             rst = 1 - SSY/SSX;
         end
 
-        function showMedata()
+        function showMedata(ID)
+            clc
             RESULTS = 'src/+repositories/results/WAVENET-IIR PMR';
 
             queryDirectory = sprintf('%s', RESULTS);
-            queryFiles = dir(sprintf('%s/*/*X METRICS.csv', queryDirectory));
+            queryFiles = dir(sprintf('%s/*/*%s METRICS.csv', queryDirectory, ID));
 
             items = size(queryFiles,1);
             data = {};
@@ -73,10 +74,36 @@ classdef IMetrics < handle
                 sku_ = [sku_; cell(folder); cell(folder)];
             end
 
-            varnames = [{'Configuration'}, varnames];
+            varnames = [{'Configuration'}, varnames];            
             data = [sku_, data];
             data = cell2table(data, 'VariableNames', varnames);
-            disp(data)
+            
+            samples = length(data.Configuration);
+            
+            fprintf('PITCH R2 Identification\n')
+            for i = 1:2:samples
+                funcs = split(data.Configuration(i),"-");
+                fprintf('(%s, %f)\n', string(funcs(1)), data.R2idfPITCH(i))
+            end
+            
+            fprintf('\nYAW R2 Identification\n')
+            for i = 1:2:samples
+                funcs = split(data.Configuration(i),"-");
+                fprintf('(%s, %f)\n', string(funcs(1)), data.R2idfYAW(i))
+            end
+            
+            fprintf('\nPITCH RMSE Identification\n')
+            for i = 2:2:samples
+                funcs = split(data.Configuration(i),"-");
+                a = data.R2idfPITCH(i);
+                b = data.R2idfYAW(i);
+                c = 0.5 * (a + b);
+                
+                fprintf('%15s & %.4f & %.4f & %.4f \\\\\n', string(funcs(1)), a,b,c)
+            end
+            
+            disp(' ')
+            disp(data);
         end
     end
 end

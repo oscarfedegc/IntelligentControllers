@@ -17,7 +17,7 @@ classdef ActivationFunction < handle
         end
         
         function initialize(self, scales, shifts)
-            if nargin < 2
+            if nargin <= 2
                 [scales, shifts] = self.getInitialValues();
             end
             
@@ -176,8 +176,8 @@ classdef ActivationFunction < handle
         
         function [scales, shifts] = getInitialValues(self)
             data = 1;
-            scales = data .* ones(1,self.neurons);
-            shifts = data:data:data*self.neurons;
+            shifts = data .* ones(1,self.neurons);
+            scales = data:data:data*self.neurons;
         end
         
         function calculateTau(self, instant)

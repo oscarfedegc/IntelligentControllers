@@ -13,36 +13,38 @@ classdef IWIIRPMR < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 60; % Simulation time [sec]
+            self.tFinal = 10; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
             self.period = 0.005; % Plant sampling period [sec]
-            self.initialStates = [0 0 0 0];
+            self.initialStates = [-40 0 0 0];
 
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPMR;
-            self.controllerGains = struct('pitch', [100 100 75 0 0 0], ...
-                                            'yaw', [300 100 75 0 0 0]);
-            self.controllerRates = struct('pitch', 1e-2.*ones(1,6),...
-                                            'yaw', 1e-2.*ones(1,6));
-            self.pitchCtrlOffset = 12.5;
-            self.yawCtrlOffset = -4.0;
+            self.controllerGains = struct('pitch', [100 100 75 .1 .1 .1], ...
+                                            'yaw', [300 100 75 .5 .5 .5]);
+            self.controllerRates = struct('pitch', 100.*ones(1,6),...
+                                            'yaw', 100.*ones(1,6));
+            
+            self.offsets = [12.5 -4.0];
             
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.polywog3;
+            self.functionSelected = WaveletList.morlet;
             
             self.inputs = 2;
             self.outputs = 2;
-            self.amountFunctions = 6;
-            self.feedbacks = 4;
-            self.feedforwards = 2;
+            self.amountFunctions = 3;
+            self.feedbacks = 5;
+            self.feedforwards = 4;
             self.persistentSignal = 100;
             
-            self.learningRates = [5e-7 1e-6 1e-10 5e-1 5e-3];
+            self.learningRates = [10e-5 10e-10 10e-7 10e-1 10e-5];
             self.rangeSynapticWeights = 0.001;
+            
+            self.idxStates = [1 3];
             
             % Training status
             self.isTraining = true;
@@ -56,8 +58,8 @@ classdef IWIIRPMR < Strategy
             
             switch trajectorySelected
                 case 1
-                    self.references = struct('pitch',  [-40 40 40 40 -20 -20 -40], ...
-                                             'yaw',    [0 -40 -40 40 40 0]);
+                    self.references = struct('pitch',  [-30 -20 0 0 20 30 30 0], ...
+                                             'yaw',    [0 -30 -30 0 0 30 30 0]);
                 case 2
                     self.references = struct('pitch',  [5 0 0 -5 -10 -10 -10 -10 0 5 5 0], ...
                                              'yaw',    [0 0 5 5 5 0 -5 -10 0 0 5 0],...
@@ -69,7 +71,7 @@ classdef IWIIRPMR < Strategy
         % This funcion calls the class to generates the objects for the simulation.
         function builder(self)
             % Building the trajectories
-            self.trajectories = ITrajectory(self.tFinal, self.period);
+            self.trajectories = ITrajectory(self.tFinal, self.period, 'rads');
             
             if self.isTraining
                 self.trajectories.add(self.references.pitch)
@@ -110,7 +112,7 @@ classdef IWIIRPMR < Strategy
             self.neuralNetwork.setSynapticRange(self.rangeSynapticWeights)
             self.neuralNetwork.buildNeuronLayer(self.functionType, ...
                 self.functionSelected, self.amountFunctions, self.inputs, self.outputs)
-            self.neuralNetwork.buildFilterLayer(self.inputs, self.feedbacks, ...
+            self.neuralNetwork.buildFilterLayer(self.inputs, self.outputs, self.feedbacks, ...
                 self.feedforwards, self.persistentSignal)
             self.neuralNetwork.setLearningRates(self.learningRates)
             self.neuralNetwork.bootInternalMemory()
@@ -141,8 +143,8 @@ classdef IWIIRPMR < Strategy
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);
                 
-                up = self.controllers(1).getSignal() + self.pitchCtrlOffset;
-                uy = self.controllers(2).getSignal() + self.yawCtrlOffset;
+                up = self.controllers(1).getSignal() + self.offsets(1);
+                uy = self.controllers(2).getSignal() + self.offsets(2);
                 u = [up uy];
                 
                 self.neuralNetwork.evaluate(kT, u)
@@ -173,21 +175,19 @@ classdef IWIIRPMR < Strategy
                 
                 self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u, Gamma, self.isTraining)
             end
-            self.setMetrics()
+            self.setMetrics(self.idxStates)
         end
         
         function saveCSV(self)
             self.repository.writeFinalParameters()
-            self.repository.setCutOffResults(false)
-            self.repository.write(self.metrics)
             self.repository.setCutOffResults(true)
-            self.repository.write(self.metrics)
+            self.repository.write(self.metrics, self.idxStates, self.offsets)
         end
         
         function showCharts(self)
             self.neuralNetwork.charts('noncompact')
-            self.controllers(1).charts('Pitch controller', self.pitchCtrlOffset)
-            self.controllers(2).charts('Yaw controller', self.yawCtrlOffset)
+            self.controllers(1).charts('Pitch controller', self.offsets(1))
+            self.controllers(2).charts('Yaw controller', self.offsets(2))
             self.plotting()
         end
     end

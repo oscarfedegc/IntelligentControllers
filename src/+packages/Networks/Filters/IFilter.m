@@ -18,9 +18,9 @@ classdef IFilter < handle
         %
         %   @returns {object} self Is the instantiated object.
         %
-        function self = IFilter(inputs, amountFeedbacks, amountFeedforwards, pSignal)
+        function self = IFilter(inputs, outputs, amountFeedbacks, amountFeedforwards, pSignal)
             self.inputs = inputs;
-            self.outputs = inputs;
+            self.outputs = outputs;
             self.coeffsM = amountFeedbacks;
             self.coeffsN = amountFeedforwards;
             self.persistentSignal = pSignal;
@@ -43,7 +43,7 @@ classdef IFilter < handle
             self.feedforwards = feedforwards;
             self.persistentSignal = pSignal;
             
-            self.iMemory = zeros(self.inputs, self.coeffsM);
+            self.iMemory = zeros(self.outputs, self.coeffsM);
             self.oMemory = zeros(self.outputs, self.coeffsN);
         end
         
@@ -222,7 +222,7 @@ classdef IFilter < handle
         function [feedbacks, feedforwards, pSignal] = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
-            value = 0.5;
+            value = 1;
             pSignal = 0.001;
             
             feedbacks = randd(-value,value,self.outputs,self.coeffsM);
@@ -246,7 +246,7 @@ classdef IFilter < handle
                         plot(array(:,row + (col-1)),'r','LineWidth',1)
                         ylabel(sprintf('%s_{%i,%i}', tag, col, row))
                 end
-                xlabel('Muestras, k')
+                xlabel('Samples, k')
             end
         end
     end

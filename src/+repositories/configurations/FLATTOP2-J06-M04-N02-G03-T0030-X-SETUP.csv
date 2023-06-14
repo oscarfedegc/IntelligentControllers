@@ -1,0 +1,2 @@
+neurons,feedbacks,feedforwards,persistent,pitch1,pitch2,pitch3,yaw1,yaw2,yaw3,scaleRate,shiftRate,synapticRate,feedbackRate,forwardRate,pitchRate1,pitchRate2,pitchRate3,yawRate1,yawRate2,yawRate3
+6,4,2,0.001,150,0.001,75,140,0.001,60,1e-11,1e-11,1e-11,1e-11,1e-11,0,0,0,0,0,0

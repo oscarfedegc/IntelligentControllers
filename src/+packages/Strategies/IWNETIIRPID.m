@@ -49,7 +49,7 @@ classdef IWNETIIRPID < Strategy
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.rasp2;
+            self.functionSelected = WaveletList.polywog3;
             
             self.inputs = 2;
             self.outputs = 2;
@@ -58,7 +58,7 @@ classdef IWNETIIRPID < Strategy
             self.feedforwards = 2;
             self.persistentSignal = 100;
             
-            self.learningRates = 1e-8.*ones(1,5);
+            self.learningRates = 1e-5.*ones(1,5);
             self.rangeSynapticWeights = 1e-2;
         end
         

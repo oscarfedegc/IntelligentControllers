@@ -56,7 +56,7 @@ classdef IWavenetPMR < Controller
                 deltaGains(i) = mu(i) * identificationError * Gamma * (epsilon(1,i) - epsilon(2,i));
             end
             
-            self.gains = self.gains + deltaGains;
+            self.gains = self.gains + deltaGains;   
         end
         
         % This function is responsable for store the tracking error into an
@@ -99,7 +99,6 @@ classdef IWavenetPMR < Controller
                 ylabel(sprintf('K_{P_%i}', row))
             end
             xlabel('Samples, k')
-            
         end
     end
     

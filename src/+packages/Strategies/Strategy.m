@@ -23,12 +23,12 @@ classdef Strategy < handle
         functionSelected % {must be WaveletList, WindowList or []}
         amountFunctions, feedbacks, feedforwards, inputs, outputs {mustBeInteger}
         learningRates, learningBetas, persistentSignal, initialStates {mustBeNumeric}
-        pitchCtrlOffset, yawCtrlOffset {mustBeNumeric}
+        offsets {mustBeNumeric}
         
         fNormApprox, fNormErrors {mustBeNumeric}
         
         directory, filename % {must be String or path}
-        metrics, rangeSynapticWeights {mustBeNumeric}
+        metrics, rangeSynapticWeights, idxStates {mustBeNumeric}
     end
     
     % Theses functions must be implemented in all inherited classes, and have
@@ -94,10 +94,10 @@ classdef Strategy < handle
             tag = {'Pitch'; 'Yaw'};
             lbl = {'theta'; 'phi'};
             samples = self.trajectories.getSamples();
-            desired = rad2deg(self.trajectories.getAllReferences());
-            measurement = rad2deg(self.model.getPerformance());
-            approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
-            wavenetoutputs = rad2deg(self.neuralNetwork.getBehaviorOutputs());
+            desired = self.trajectories.getAllReferences();
+            measurement = self.model.getPerformance();
+            approximation = self.neuralNetwork.getBehaviorApproximation();
+            wavenetoutputs = self.neuralNetwork.getBehaviorOutputs();
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             time = 0:self.period:self.tFinal;
@@ -171,10 +171,10 @@ classdef Strategy < handle
             lbl = {'theta'; 'phi'};
             
             instants = self.trajectories.getInstants();
-            desired = rad2deg(self.trajectories.getAllReferences());
-            measurement = rad2deg(self.model.getPerformance());
-            approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
-            wavenetoutputs = rad2deg(self.neuralNetwork.getPerfWavenet());
+            desired = self.trajectories.getAllReferences();
+            measurement = self.model.getPerformance(self.idxStates);
+            approximation = self.neuralNetwork.getBehaviorApproximation();
+            wavenetoutputs = self.neuralNetwork.getPerfWavenet();
             
             rows = 2;
             cols = length(desired(1,:));
@@ -225,14 +225,14 @@ classdef Strategy < handle
         
         % This functions calls a class to calculate different metrics for
         % the tracking and identification process
-        function setMetrics(self)
+        function setMetrics(self, states)
             if ~self.isSuccessfully
                 return
             end
             
-            desired = rad2deg(self.trajectories.getAllReferences());
-            measurement = rad2deg(self.model.getPerformance());
-            approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
+            desired = self.trajectories.getAllReferences();
+            measurement = self.model.getPerformance(states);
+            approximation = self.neuralNetwork.getBehaviorApproximation();
 
             self.metrics = [];
 

@@ -38,10 +38,10 @@ classdef IRepositoryWNETIIRPMR < Repository
             writetable(data, self.configurationpath)
         end
         
-        function writeModelFiles(self)
+        function writeModelFiles(self, states)
             instants = self.trajectories.getInstants();
             desired = rad2deg(self.trajectories.getAllReferences());
-            measurement = rad2deg(self.model.getPerformance());
+            measurement = rad2deg(self.model.getPerformance(states));
             approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
             trackingError = desired - measurement;
             identifError = measurement - approximation;
@@ -72,14 +72,16 @@ classdef IRepositoryWNETIIRPMR < Repository
             self.writeFilterLayer(instants, labels)
         end
         
-        function writeControllerFiles(self)
+        function writeControllerFiles(self, offsets)
             instants = self.trajectories.getInstants();
             instants = instants(self.indexes);
             labels = self.model.getLabels();
-            offsets = [12.5 -4];
             
             for i = 1:length(self.controllers)
+                temp = offsets(i) * ones(length(self.indexes),1);
                 performance = self.controllers(i).getPerformance();
+                performance(self.indexes,2) = performance(self.indexes,2) + temp;
+                
                 performance = [instants performance(self.indexes,:)];
 
                 self.writeParameterFile(performance, ...

@@ -27,6 +27,7 @@ classdef Application < handle
             % Changes the algorithm to use.
             %   NOTE: The user can implement new classes for new control strategies.
             % SINTAX: algorithm.setAlgorithm(nameClass())
+%             algorithm.setAlgorithm(IWNETPID_CRAZYFLIE_6DOF())
             algorithm.setAlgorithm(IWIIRPMR())
             
             % Simulation setup

@@ -53,11 +53,11 @@ classdef Repository < handle
             self.setIndexes()
         end
         
-        function write(self, metrics)
+        function write(self, metrics, states, offsets)
             self.setFolderPath()
-            self.writeModelFiles()
+            self.writeModelFiles(states)
             self.writeNeuralNetworkFiles()
-            self.writeControllerFiles()
+            self.writeControllerFiles(offsets)
             self.writeMetrics(metrics)
         end
 

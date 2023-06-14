@@ -3,6 +3,7 @@ classdef ITrajectory < handle
     properties (Access = protected)
         instants, positions, period {mustBeNumeric}
         samples {mustBeInteger}
+        units % {mustBe Meters, Radians, etc}
     end
     
     methods (Access = public)
@@ -13,11 +14,12 @@ classdef ITrajectory < handle
         %   @param {float} period Sampling time in seconds of the system for which the trajectory is generated.
         %   @returns {object} self Instantiation of the class.
         %}
-        function self = ITrajectory(tFinal, period)
+        function self = ITrajectory(tFinal, period, units)
             self.samples = round(tFinal/period);
             self.instants = linspace(0, tFinal, self.samples)';
             self.positions = [];
             self.period = period;
+            self.units = units;
         end
         
         %{
@@ -43,6 +45,45 @@ classdef ITrajectory < handle
         
         function addPositions(self, references, times)
             self.newPosition(references, times);
+        end
+        
+        function staticReferences(self)
+            T = self.period;
+    
+            ta = 0:T:2.5;
+            ya = 28*sin(pi.*ta/1.5);
+
+            tb = 2.5 + T: T: 5;
+            yb = 15 * ones(1,length(tb));
+
+            tc = 5 + T: T: 7.5;
+            yc = -15 * ones(1,length(tc));
+
+            td = 7.5 + T: T: 10;
+            yd = 12*sin(pi.*td./2) + 4*sin(pi.*td./3) + 8*sin(pi.*td);
+
+            TT = [ta tb tc td]';
+            if strcmp(self.units, 'rads')
+                YY = deg2rad([ya yb yc yd]');
+            else
+                YY = [ya yb yc yd]';
+            end
+
+            te = 0: T: 5;
+            ye = 12*sin(pi.*te./5);
+
+            tf = 5 + T: T: 10;
+            yf = 10*sin(pi.*tf./5) + 2*sin(pi.*tf/0.5);
+
+            TU = [te tf]';
+            
+            if strcmp(self.units, 'rads')
+                YU = deg2rad([ye yf]');
+            else
+                YU = [ye yf]';
+            end
+            
+            self.positions = [YY YU];
         end
     end
     
@@ -85,7 +126,9 @@ classdef ITrajectory < handle
         %   @param {array<float>} references Reference positions for all trajectory.
         %}
         function newTrajectory(self, references)
-            references = deg2rad(references);
+            if strcmp(self.units,'rads')
+                references = deg2rad(references);
+            end
             temp = zeros(self.samples, 1);
             
             % Calculating intervals for the equation's cases
@@ -111,7 +154,9 @@ classdef ITrajectory < handle
         %   @param {array<float>} references Reference positions for all trajectory.
         %}
         function newPosition(self, references, times)
-            references = deg2rad(references);
+            if strcmp(self.units,'rads')
+                references = deg2rad(references);
+            end
             temp = zeros(self.samples, 1);
             times = [0 times] ./ self.period;
             

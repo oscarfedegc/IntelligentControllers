@@ -8,7 +8,7 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             self.allLearningRates = rates;
         end
         
-        function evaluate(self, instant, inputs)
+        function evaluate(self, instant, inputs) % ~instant
             % Wavenet outputs
             self.setInputs(inputs);
             self.hiddenNeuronLayer.evaluate(instant);
@@ -60,8 +60,8 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             end
         end
         
-        function buildFilterLayer(self, inputs, coeffsN, coeffsM, pSignal)
-            self.filterLayer = IFilter(inputs, coeffsN, coeffsM, pSignal);
+        function buildFilterLayer(self, inputs, outputs, coeffsN, coeffsM, pSignal)
+            self.filterLayer = IFilter(inputs, outputs, coeffsN, coeffsM, pSignal);
         end
         
         function setFilterInitialValues(self, feedbacks, feedforwards, pSignal)
@@ -99,6 +99,7 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
         
         function [GradientW, Gradienta, Gradientb, GradientC, GradientD] = ...
                 calculateGradients(self, controlSignals, error)
+            
             Ie = diag(error,0);
             If = error;
             tau = self.hiddenNeuronLayer.getTau();
@@ -126,8 +127,6 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             rows = self.hiddenNeuronLayer.getNeurons();
             weigths = self.perfSynapticWeights;
             
-            tag = {'theta'; 'phi'};
-            
             figure('Name','Synaptic weigths','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
             
             for col = 1:cols
@@ -136,16 +135,18 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
                 end
             end
             
-            for row = 1:rows
-                subplot(rows, cols, 1 + cols*(row-1))
-                    plot(weigths(:, row + (col-1)),'r','LineWidth',1)
-                    ylabel(sprintf('w_{\\%s_%i}', string(tag(col)), row))
-                    
-                if row == rows; xlabel('Samples, k'); end
-                
-                subplot(rows, cols, 2 + cols*(row-1))
-                    plot(weigths(:,row),'r','LineWidth',1)
-                    ylabel(sprintf('w_{\\%s_%i}', string(tag(2)), row))
+            for col = 1:cols
+                for row = 1:rows
+                    subplot(rows, cols, 1 + cols*(row-1))
+                        plot(weigths(:, row + (col-1)),'r','LineWidth',1)
+                        ylabel(sprintf('w_{%i,%i}', col, row))
+
+                    if row == rows; xlabel('Samples, k'); end
+
+                    subplot(rows, cols, 2 + cols*(row-1))
+                        plot(weigths(:,row),'r','LineWidth',1)
+                        ylabel(sprintf('w_{%i,%i}', col, row))
+                end
             end
             xlabel('Samples, k')
         end
