@@ -83,10 +83,6 @@ classdef Repository < handle
                 mkdir(self.resultspath)
             end
             
-            if exist(self.cutrstspath,'dir') == 0
-                mkdir(self.cutrstspath)
-            end
-
             if exist(self.valuespath,'dir') == 0
                 mkdir(self.valuespath)
             end
@@ -95,11 +91,15 @@ classdef Repository < handle
                 mkdir(self.CONFIGURATIONS)
             end
         end
+        
+        function str = getSKU(self)
+            str = self.skuResults;
+        end
     end
     
     methods (Access = protected)
         function getFoldersName(self)
-            self.getSKU()
+            self.generateSKU()
             
             self.configurationpath = sprintf('%s%s-SETUP.csv',  self.CONFIGURATIONS, self.skuResults);
             self.valuespath = sprintf('%s/%s%s/', self.VALUES, self.FOLDER, self.skuParams);
@@ -107,9 +107,10 @@ classdef Repository < handle
             self.cutrstspath = sprintf('%s%s%s-C010/', self.RESULTS, self.FOLDER, self.skuResults);
         end
 
-        function getSKU(self)
+        function generateSKU(self)
             instance = self.neuralNetwork.getHiddenNeuronLayer();
-            status = self.neuralNetwork.getStatus();
+            typeReference = self.trajectories.getTypeRef();
+            nnstatus = self.neuralNetwork.getStatus();
             
             switch class(instance)
                 case 'IWavelet'
@@ -148,7 +149,8 @@ classdef Repository < handle
             end
 
             self.skuParams = upper(sprintf('%s', temp));
-            self.skuResults = upper(sprintf('%s-%s%02d-T%04d-%s', temp, var, gains-fixed, finalTime, status));
+            self.skuResults = upper(sprintf('%s-%s%02d-T%03d-%s-%s', ...
+                temp, var, gains-fixed, finalTime, typeReference, nnstatus));
         end
 
         function setIndexes(self)

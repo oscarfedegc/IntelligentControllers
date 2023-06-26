@@ -101,6 +101,8 @@ classdef UTCrazyflie6DOF
             yawrateCtrl.setUpdateRates(controllerRates.yawrate)
             yawrateCtrl.initPerformance(samples)
             
+            m = 0.0320;
+            
             for iter = 1:samples
                 sDesired = positions.getReferences(iter);
                 
@@ -123,8 +125,14 @@ classdef UTCrazyflie6DOF
                 xpsCtrl.evaluate()
                 ypsCtrl.evaluate()
                 
-                rollDesired = xpsCtrl.getSignal();
-                pitchDesired = ypsCtrl.getSignal();
+                ddotxDesired = xpsCtrl.getSignal();
+                ddotyDesired = ypsCtrl.getSignal();
+                
+%                 rollDesired = (m/v1) * (-ddotxDesired * sin(realStates(11)) + ddotyDesired * cos(realStates(11)));
+%                 pitchDesired = (m/v1) * (-ddotxDesired * cos(realStates(11)) - ddotyDesired * sin(realStates(11)));
+
+                rollDesired = ddotxDesired;
+                pitchDesired = ddotyDesired;
                 
                 rollError = rollDesired - realStates(7);
                 pitchError = pitchDesired - realStates(9);

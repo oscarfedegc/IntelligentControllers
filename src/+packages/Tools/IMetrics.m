@@ -49,9 +49,9 @@ classdef IMetrics < handle
             rst = 1 - SSY/SSX;
         end
 
-        function showMedata(ID)
+        function showMetadata(ID, PREFIX)
             clc
-            RESULTS = 'src/+repositories/results/WAVENET-IIR PMR';
+            RESULTS = sprintf('src/+repositories/results/WAVENET-IIR %s', PREFIX);
 
             queryDirectory = sprintf('%s', RESULTS);
             queryFiles = dir(sprintf('%s/*/*%s METRICS.csv', queryDirectory, ID));
@@ -95,15 +95,14 @@ classdef IMetrics < handle
             fprintf('\nPITCH RMSE Identification\n')
             for i = 2:2:samples
                 funcs = split(data.Configuration(i),"-");
-                a = data.R2idfPITCH(i);
-                b = data.R2idfYAW(i);
+                a = rad2deg(data.R2idfPITCH(i));
+                b = rad2deg(data.R2idfYAW(i));
                 c = 0.5 * (a + b);
                 
                 fprintf('%15s & %.4f & %.4f & %.4f \\\\\n', string(funcs(1)), a,b,c)
             end
             
             disp(' ')
-            disp(data);
         end
     end
 end

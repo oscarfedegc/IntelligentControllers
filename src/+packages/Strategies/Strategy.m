@@ -17,6 +17,7 @@ classdef Strategy < handle
         plantType % {must be PlantList}
         controllerType % {must be ControllerTypes}
         references, controllerGains, controllerRates % {must be Structure}
+        typeReference % {mustBeString}
         
         nnaType % {must be NetworkList}
         functionType % {must be FuntionList}

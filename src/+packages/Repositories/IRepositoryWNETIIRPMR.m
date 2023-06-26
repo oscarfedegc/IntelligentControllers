@@ -93,7 +93,7 @@ classdef IRepositoryWNETIIRPMR < Repository
             instance = self.neuralNetwork.getHiddenNeuronLayer();
             
             Scales = instance.getScales();
-            Shifts = instance.getShifts();            
+            Shifts = instance.getShifts();
             Weights = self.neuralNetwork.getSynapticWeights();
             Feedbacks = self.neuralNetwork.filterLayer.getFeedbacks();
             Forwards = self.neuralNetwork.filterLayer.getFeedforwards();

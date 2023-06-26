@@ -4,6 +4,7 @@ classdef ITrajectory < handle
         instants, positions, period {mustBeNumeric}
         samples {mustBeInteger}
         units % {mustBe Meters, Radians, etc}
+        type % {mustBeString}
     end
     
     methods (Access = public)
@@ -115,6 +116,18 @@ classdef ITrajectory < handle
         
         function trajectory = getTrajectory(self, degree)
             trajectory = self.positions(:, degree);
+        end
+        
+        function setReferences(self, references)
+            self.positions = references;
+        end
+        
+        function setTypeRef(self, type)
+            self.type = type;
+        end
+        
+        function type = getTypeRef(self)
+            type = self.type;
         end
     end
     

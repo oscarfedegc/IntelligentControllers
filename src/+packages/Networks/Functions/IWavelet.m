@@ -41,7 +41,7 @@ classdef IWavelet < ActivationFunction
         function morlet(self)
             w0 = 0.5;
             t = self.tau;
-            a = self.shifts;
+            a = self.scales;
             
             self.funcOutput = cos(w0*t).*exp(-0.5*t.^2);
             self.dfuncOutput = (w0.*sin(w0*t).*exp(-0.5*t.^2) + t.*self.funcOutput)./a;
@@ -54,7 +54,7 @@ classdef IWavelet < ActivationFunction
         
         function rasp(self)
             t = self.tau;
-            a = self.shifts;
+            a = self.scales;
             
             switch self.wavelet
                 case WaveletList.rasp1
@@ -74,7 +74,7 @@ classdef IWavelet < ActivationFunction
         
         function polywog(self)
             t = self.tau;
-            a = self.shifts;
+            a = self.scales;
             e = exp(-0.5*t.^2);
             
             switch self.wavelet
@@ -101,7 +101,7 @@ classdef IWavelet < ActivationFunction
         
         function shannon(self)
             t = self.tau;
-            a = self.shifts;
+            a = self.scales;
             
             self.funcOutput = (sin(2*pi.*t) - sin(pi.*t))./(pi.*t);
             self.dfuncOutput = (-2*pi.*t.*cos(2*pi.*t) + pi.*t.*cos(pi.*t) + sin(2*pi.*t) - sin(pi.*t)) .* pi ./ (pi.*a).^2;
@@ -109,7 +109,7 @@ classdef IWavelet < ActivationFunction
         
         function gaussian(self)
             t = self.tau;
-            a = self.shifts;
+            a = self.scales;
             b = self.scales;
             
             self.funcOutput = exp((t-a)./(2*b.^2));

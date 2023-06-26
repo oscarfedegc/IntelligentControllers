@@ -16,6 +16,11 @@ classdef Helicopter2DOF < Plant
             position = [self.states(iter,1) self.states(iter,3)];
         end
         
+        function addNoise(self, noise, iter)
+            self.states(iter,1) = self.states(iter,1) + noise(1);
+            self.states(iter,3) = self.states(iter,3) + noise(2);
+        end
+        
         function order = getOrder(self)
             order = self.ORDER;
         end

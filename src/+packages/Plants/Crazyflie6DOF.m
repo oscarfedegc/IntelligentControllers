@@ -76,7 +76,7 @@ classdef Crazyflie6DOF < Plant
                     0 0 0 1/Jzz
                ];
 
-           u = control' * 0.000001;
+           u = control';
            
             xdot = f + g*u;
 

@@ -103,7 +103,7 @@ classdef ActivationFunction < handle
             cols = 3;
             rows = 1;
             tag = {'a', 'b', '\tau'};
-            lbl = {'Shifts', 'Scales', 'Wavelet'};
+            lbl = {'Scales', 'Shifts', 'Wavelet'};
             
             figure('Name','Scaling and shifting parameters','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
             
@@ -176,8 +176,8 @@ classdef ActivationFunction < handle
         
         function [scales, shifts] = getInitialValues(self)
             data = 1;
-            shifts = data .* ones(1,self.neurons);
-            scales = data:data:data*self.neurons;
+            scales = data .* ones(1,self.neurons);
+            shifts = data:data:data*self.neurons;
         end
         
         function calculateTau(self, instant)
