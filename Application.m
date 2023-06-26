@@ -29,6 +29,8 @@ classdef Application < handle
             % SINTAX: algorithm.setAlgorithm(nameClass())
 %             algorithm.setAlgorithm(IWNETPID_CRAZYFLIE_6DOF())
             algorithm.setAlgorithm(IWIIRPMR())
+%             algorithm.setAlgorithm(IWIIRPID())
+%             algorithm.setAlgorithm(IWIIRIDF())
             
             % Simulation setup
             algorithm.setup()
@@ -42,7 +44,7 @@ classdef Application < handle
             % Writes the simulations results to CSV files
             algorithm.writeCSV()
 
-            % Shows the simulation results in graphs
+%             Shows the simulation results in graphs
             algorithm.charts()
         end
     end
