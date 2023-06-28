@@ -9,6 +9,7 @@ classdef Helicopter2DOF < Plant
             self.labels = {'pitch', 'yaw'};
             self.symbols = {'theta', 'phi'};
             self.nStates = self.ORDER;
+            self.nTerms = 6;
         end
         
         function position = measured(self, inputs, iter)
@@ -63,6 +64,8 @@ classdef Helicopter2DOF < Plant
             f = [x2; f1; x4; f2];
             g = [0,0; g11,g12; 0,0; g21,g22];
             u = [control(1); control(2)];
+            
+            self.perfTerms(iter,:) = [f1 f2 g11 g12 g21 g22];
 
             xdot = f + g*u;
 

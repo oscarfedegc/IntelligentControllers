@@ -11,9 +11,9 @@ classdef ActivationFunction < handle
     
     methods (Access = public)
         function evaluate(self, instant)
-            self.calculateTau(instant);
-            self.normalizedTau(-1,1);
-            self.evaluateFunction();
+            self.calculateTau(instant)
+            self.normalizedTau(-1,1)
+            self.evaluateFunction()
         end
         
         function initialize(self, scales, shifts)

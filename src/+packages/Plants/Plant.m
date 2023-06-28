@@ -3,6 +3,7 @@ classdef Plant < handle
         name, labels, symbols % {must Be String}
         nStates {mustBeInteger}
         states, Gamma, approximation, period {mustBeNumeric}
+        perfTerms, nTerms {mustBeNumeric}
     end
     
     methods (Abstract = true)
@@ -14,6 +15,7 @@ classdef Plant < handle
             self.states = zeros(samples, self.nStates);
             self.states(1,:) = initial;
             self.approximation = self.states;
+            self.perfTerms = zeros(samples, self.nTerms);
         end
         
         function positions = reads(self, degree)
@@ -23,6 +25,10 @@ classdef Plant < handle
         function positions = getPerformance(self, states)
             n = length(self.states(:,1)) - 1;
             positions = self.states(1:n, states);
+        end
+        
+        function terms = getTerms(self)
+            terms = self.perfTerms;
         end
         
         function setPeriod(self, period)

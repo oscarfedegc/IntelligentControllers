@@ -20,7 +20,7 @@ classdef IWIIRPMR < Strategy
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
             self.period = 0.005; % Plant sampling period [sec]
-            self.initialStates = [0 0 0 0];
+            self.initialStates = [-40 0 0 0];
 
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPMR;
@@ -51,7 +51,7 @@ classdef IWIIRPMR < Strategy
             
             % Training status and type reference signals
             self.isTraining = false;
-            self.typeReference = 'S01';
+            self.typeReference = 'P01';
             
             % Trajectory parameters (positions in degrees)
             switch self.typeReference
@@ -76,7 +76,7 @@ classdef IWIIRPMR < Strategy
             self.trajectories = ITrajectory(self.tFinal, self.period, 'rads');
             self.trajectories.setTypeRef(self.typeReference)
             
-            if self.isTraining
+            if ~strcmp(self.isTraining,'S01')
                 self.trajectories.add(self.references.pitch)
                 self.trajectories.add(self.references.yaw)
             else

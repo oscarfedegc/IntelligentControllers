@@ -33,7 +33,7 @@ classdef IWIIRIDF < Strategy
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.polywog4;
+            self.functionSelected = WaveletList.morlet;
             
             self.inputs = 2;
             self.outputs = 2;

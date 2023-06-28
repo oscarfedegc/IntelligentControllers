@@ -13,7 +13,7 @@ classdef IWIIRPID < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 20; % Simulation time [sec]
+            self.tFinal = 60; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -22,16 +22,16 @@ classdef IWIIRPID < Strategy
 
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPID;
-            self.controllerGains = struct('pitch', [10 0 0], ...
-                                            'yaw', [15 0 0]);
+            self.controllerGains = struct('pitch', [0.1 0 0], ...
+                                            'yaw', [0.1 0 0]);
             self.controllerRates = struct('pitch', 1e-2.*zeros(1,3),...
                                             'yaw', 1e-2.*zeros(1,3));
             self.offsets = [12.5 -4.0];
             
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
-            self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.morlet;
+            self.functionType = FunctionList.window;
+            self.functionSelected = WindowList.flattop2;
             
             self.inputs = 2;
             self.outputs = 2;
@@ -45,23 +45,24 @@ classdef IWIIRPID < Strategy
             
             self.idxStates = [1 3];
             
-            % Training status
+            self.idxStates = [1 3];
+            
+            % Training status and type reference signals
             self.isTraining = true;
+            self.typeReference = 'S01';
             
             % Trajectory parameters (positions in degrees)
-            if self.isTraining
-                trajectorySelected = 1;
-            else
-                trajectorySelected = 2;
-            end
-            
-            switch trajectorySelected
-                case 1
-                    self.references = struct('pitch',  [-30 30 30 30 -15 -15 -20], ...
-                                             'yaw',    [0 -20 -20 20 20 0]);
-                case 2
-                    self.references = struct('pitch',  [5 0 0 -5 -10 -10 -10 -10 0 5 5 0], ...
-                                             'yaw',    [0 0 5 5 5 0 -5 -10 0 0 5 0],...
+            switch self.typeReference
+                case 'P01'
+                    self.references = struct('pitch',  [-40 40 40 10 10 -20 -20 -40], ...
+                                             'yaw',    [0 -40 -40 0 0 40 40 0]);
+                                         
+                case 'P02'                                         
+                    self.references = struct('pitch',  [-20 -20 0 0 20 20], ...
+                                             'yaw',    [0 -10 -10 0 0 10 10]);
+                case 'S01'
+                    self.references = struct('pitch',  [5 0 0 -5 -10 -10 -10 -10 -5 0 -5 0], ...
+                                             'yaw',    [0 0 5 5 5 0 -5 -10 -5 0 5 0], ...
                                              'tpitch', 5:5:self.tFinal,...
                                              'tyaw',   5:5:self.tFinal);
             end
@@ -72,7 +73,7 @@ classdef IWIIRPID < Strategy
             % Building the trajectories
             self.trajectories = ITrajectory(self.tFinal, self.period, 'rads');
             
-            if self.isTraining
+            if ~strcmp(self.isTraining,'S01')
                 self.trajectories.add(self.references.pitch)
                 self.trajectories.add(self.references.yaw)
             else
@@ -171,7 +172,6 @@ classdef IWIIRPID < Strategy
                 self.controllers(2).evaluate()
                 
                 self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u, Gamma, self.isTraining)
-                pause(0.25)
             end
             self.setMetrics()
         end
