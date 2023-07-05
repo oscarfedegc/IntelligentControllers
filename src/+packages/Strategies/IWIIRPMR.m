@@ -43,7 +43,7 @@ classdef IWIIRPMR < Strategy
             self.feedforwards = 2;
             self.persistentSignal = 50;
             
-            % Synaptic weights,  scales, shifts, feedbacks and forwards            
+            % learningRate = [Synaptic weights, scales, shifts, feedbacks, forwards]
             self.learningRates = [10e-5 10e-5 5e-6 5e-1 5e-2];
             self.rangeSynapticWeights = 0.001;
             

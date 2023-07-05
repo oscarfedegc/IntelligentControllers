@@ -1,6 +1,6 @@
 % This class implements the PMR Controller and its methods to calculate the
-% control signal and autotune its gains.
-classdef IWavenetPMR < Controller
+% control signal and autotune its gains using a Wavenet-IIR parameter.
+classdef IWavenetControllerPMR < Controller
     properties (Access = private)
         level, errorSignals, errorSamples {mustBeNumeric}
     end
@@ -10,7 +10,7 @@ classdef IWavenetPMR < Controller
         %
         %   @returns {object} self Is the instantiated object.
         %
-        function self = IWavenetPMR()
+        function self = IWavenetControllerPMR()
             self.signal = 0;
             self.level = 2;
             self.gains = rand(1,3);

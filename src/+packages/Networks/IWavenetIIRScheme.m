@@ -8,10 +8,10 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             self.allLearningRates = rates;
         end
         
-        function evaluate(self, instant, inputs) % ~instant
+        function evaluate(self, ~, inputs) % ~instant
             % Wavenet outputs
             self.setInputs(inputs);
-            self.hiddenNeuronLayer.evaluate(instant);
+            self.hiddenNeuronLayer.evaluate(inputs);
             outputFunction = self.hiddenNeuronLayer.getFuncOutput();
             tempWnet = self.calculateNetworkOutput(inputs, outputFunction, self.synapticWeights);
             
@@ -85,6 +85,39 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
         function [RhoIIR, GammaIIR] = getApproximation(self)
             RhoIIR = self.filterLayer.getRho();
             GammaIIR = self.filterLayer.getGamma();
+        end
+    end
+    
+    methods (Access = public)
+        function [GradientW, Gradienta, Gradientb, GradientC, GradientD] = ...
+                getGradients(self, controlSignals, error)
+            
+            Ie = diag(error,0);
+            If = error;
+            tau = self.hiddenNeuronLayer.getTau();
+            C = self.filterLayer.getFeedbacks();
+            D = self.filterLayer.getFeedforwards();
+            A = self.functionMemory + 1;
+            B = self.derivativeMemory + 1;
+            Z = self.filterLayer.iMemory + 1;
+            Y = self.filterLayer.oMemory + 1;
+            p = 1
+            
+            GradientW = sum(controlSignals) * sum(error) * C' * A;
+            Gradientb = sum(controlSignals) * If * (C' * B);
+            Gradienta = Gradientb .* tau;
+            GradientC = sum(controlSignals) * Ie * Z;
+            GradientD = p .* Ie * Y;
+        end
+        
+        function [tau, waveOutput, wnetOutput] = getTau(self, inputs, instant)
+            % Wavenet outputs
+            self.setInputs(inputs);
+            self.hiddenNeuronLayer.evaluate(instant);
+            
+            tau = self.hiddenNeuronLayer.getTau();
+            waveOutput = self.hiddenNeuronLayer.getFuncOutput();
+            wnetOutput = [0 0];
         end
     end
     

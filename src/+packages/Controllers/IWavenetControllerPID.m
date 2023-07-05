@@ -1,14 +1,15 @@
 % This class implements the PID Controller and its methods to calculate the
-% control signal and autotune its gains.
-classdef IClassicalPID < Controller
+% control signal and autotune its gains using a WaveNet-IIR parameter.
+classdef IWavenetControllerPID < Controller
     methods (Access = public)
         % Class constructor.
         %
         %   @returns {object} self Is the instantiated object.
         %
-        function self = IClassicalPID()
+        function self = IWavenetControllerPID()
             self.signal = 0;
             self.gains = zeros(1,3);
+            self.updateRates = zeros(1,3);
             self.eTrackingMemory = zeros(1,3);
         end
         
@@ -20,7 +21,7 @@ classdef IClassicalPID < Controller
         %                                    the wavenet output.
         %   @param {float} gamma Represents a wavenet parameter.
         %
-        function autotune(self, trackingErr)
+        function autotune(self, trackingErr, identificationErr, gamma)
             self.updateMemory(trackingErr)
             
             kp = self.gains(1);
@@ -31,11 +32,12 @@ classdef IClassicalPID < Controller
             md = self.updateRates(3);
             ep = self.eTrackingMemory;
             
-            kp = kp + mp*(ep(1) - ep(2));
-            ki = ki + mi*ep(1);
-            kd = kd + md*(ep(1) - 2*ep(2) + ep(3));
+            kp = kp + mp*identificationErr*gamma*(ep(1) - ep(2));
+            ki = ki + mi*identificationErr*gamma*ep(1);
+            kd = kd + md*identificationErr*gamma*(ep(1) - 2*ep(2) + ep(3));
             
             self.gains = [kp ki kd];
+            % self.normalized(1,2);
         end
         
         % This function is responsable for store the tracking error into an
@@ -46,11 +48,12 @@ classdef IClassicalPID < Controller
         %
         function updateMemory(self, trackingError)
             self.eTrackingMemory = [trackingError, self.eTrackingMemory(1:2)];
-            self.eTrackingMemory
         end
         
-        % This function is in charge of calculate the control signal by
-        % applying its controller formula.
+        % This function is in charge of calculate the control signal.
+        %
+        %   @param {object} self Stands for instantiated object from this class.
+        %
         function evaluate(self)            
             u = self.signal;
             kp = self.gains(1);
@@ -65,27 +68,34 @@ classdef IClassicalPID < Controller
         %
         %   @param {string} title Indicates the name graph to show.
         %
-        function charts(self, title)
+        function charts(self, title, offset)
             figure('Name',title,'NumberTitle','off','units','normalized',...
                 'outerposition',[0 0 1 1]);
             
-            tag = {'Proportional'; 'Integral'; 'Derivative'};
-            subs = {'p'; 'i'; 'd'};
-            samples = length(self.performance(:,1));
-            
             items = length(self.performance(1,:));
-            for row = 1:items - 1
+            
+            subplot(items, 1, 1)
+                plot(self.performance(:,1) + offset,'r','LineWidth',1)
+                ylabel('Control signal, u [V]')
+                
+            for row = 2:items
                 subplot(items, 1, row)
                 plot(self.performance(:,row),'r','LineWidth',1)
-                ylabel(sprintf('%s, K_{%s}', string(tag(row)), string(subs(row))))
-                xlim([1 samples])
+                ylabel(sprintf('K_{P_%i}', row))
             end
-            
-            subplot(items, 1, items)
-                plot(self.performance(:,items),'r','LineWidth',1)
-                ylabel('Control signal, u [V]')
-                xlabel('Samples, k')
-                xlim([1 samples])
+            xlabel('Samples, k')
+        end
+    end
+    
+    methods (Access = protected)
+        % Normalizes the gain values.
+        %
+        %   @param {float} inf Lower limit
+        %   @param {float} sup Superior limit
+        %
+        function normalized(self, inf, sup)
+            data = self.gains;
+            self.gains = inf + (data - min(data)).*(sup - inf)./(max(data) - min(data));
         end
     end
 end

@@ -1,3 +1,5 @@
+% This abstract class represents the plants and their components: name,
+% labels, number of states, and so on.
 classdef Plant < handle
     properties (Access = protected)
         name, labels, symbols % {must Be String}
@@ -6,6 +8,7 @@ classdef Plant < handle
         perfTerms, nTerms {mustBeNumeric}
     end
     
+    % Theses functions must be implemented in all inherited classes.
     methods (Abstract = true)
         measured();
     end

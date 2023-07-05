@@ -1,4 +1,4 @@
-% This abstract class represents the controller schemes and their%
+% This abstract class represents the controller schemes and their
 % components: the gains, the update rates, the control signals, and the
 % tracking error memory for autotune.
 classdef Controller < handle
@@ -7,8 +7,8 @@ classdef Controller < handle
         performance {mustBeNumeric}
     end
     
-    % Theses functions must be implemented in all inherited classes, and have
-    % to be called in the following order.
+    % Theses functions must be implemented in all inherited classes, and
+    % have to be called in the following order.
     methods (Abstract)
         evaluate();
         autotune();
@@ -16,6 +16,7 @@ classdef Controller < handle
         charts();
     end
     
+    % Theses methods are the getters and setter for each propierty
     methods (Access = public)
         % Assign the initial value of gains.
         %
@@ -33,7 +34,7 @@ classdef Controller < handle
             gains = self.gains;
         end
         
-        % Assign the values of gain update rates.
+        % Assigns the values of gain update rates.
         %
         %   @param {float} rates Indicates the values array.
         %
@@ -41,6 +42,9 @@ classdef Controller < handle
             self.updateRates = rates;
         end
 
+        % Get the update rate values for each gains.
+        %
+        % @returns {float} rates Vector of update rate gains.
         function rates = getUpdateRates(self)
             rates = self.updateRates;
         end

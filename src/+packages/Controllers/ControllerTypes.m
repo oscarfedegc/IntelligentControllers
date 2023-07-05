@@ -2,8 +2,8 @@
 % The user can add his own controls.
 classdef ControllerTypes
     enumeration
-        WavenetPID % Proportional, Integral and Derivative
-        WavenetPMR % Proportional multiresolution
         ClassicalPID % Estatic Proportional, Integral and Derivative
+        WavenetPID % Proportional-Integral-Derivative with a WNET-IIR
+        WavenetPMR % Proportional multi-resolution with a WNET-IIR
     end
 end

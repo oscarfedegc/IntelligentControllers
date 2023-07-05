@@ -1,5 +1,5 @@
 % This class represents a "Factory" of Controllers and needs the
-% ControllerTypes class.
+% ControllerTYpes class.
 classdef ControllerFactory
     methods (Static)
         % Calls a specific implementation of controller.
@@ -11,11 +11,11 @@ classdef ControllerFactory
         function product = create(controllerType)
             switch controllerType
                 case ControllerTypes.WavenetPID
-                    product = IWavenetPID();
+                    product = IWavenetControllerPID();
                 case ControllerTypes.WavenetPMR
-                    product = IWavenetPMR();
+                    product = IWavenetControllerPMR();
                 case ControllerTypes.ClassicalPID
-                    product = IClassicalPID();
+                    product = IClassicalControllerPID();
             end
         end
     end

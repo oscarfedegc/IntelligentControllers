@@ -26,7 +26,7 @@ classdef UTHelicopter2DOF
             
             for iter = 1:samples
                 pitchCtrl = 10*sin(2*iter*period);
-                yawCtrl = 5*cos(4*iter*period);
+                yawCtrl = 50*cos(4*iter*period);
                 
                 u = [pitchCtrl yawCtrl];
                 

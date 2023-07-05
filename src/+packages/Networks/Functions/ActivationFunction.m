@@ -1,3 +1,6 @@
+% This abstract class represents the activation function and its operations: 
+%   calculate the function output, update parameters, boot initial values
+%   for the parameters, and plotting its behavior.
 classdef ActivationFunction < handle
     properties (Access = protected)
         neurons {mustBeInteger}
@@ -5,17 +8,28 @@ classdef ActivationFunction < handle
         perfScales, perfShifts, perfTau, perfFuncOutput, perfdfunOutput {mustBeNumeric}
     end
     
+    % Theses functions must be implemented in all inherited classes.
     methods (Abstract)
         evaluateFunction();
     end
     
     methods (Access = public)
+        % Calculates the output of activation function.
+        %
+        %   @param {float} instant Indicates the time of operation.
+        %
         function evaluate(self, instant)
             self.calculateTau(instant)
             self.normalizedTau(-1,1)
             self.evaluateFunction()
         end
         
+        % Initializes the scales and shifts values. 
+        % If there are not input arguments, the value are generate.
+        %
+        %   @param {float} scales Initial values of the scales.
+        %   @param {float} shifts Initial values of the shifts.
+        %
         function initialize(self, scales, shifts)
             if nargin <= 2
                 [scales, shifts] = self.getInitialValues();
@@ -25,11 +39,18 @@ classdef ActivationFunction < handle
             self.setShifts(shifts);
         end
         
+        % Updates the scales and shifts values.
+        %
+        %   @param {float} scales New values of the scales.
+        %   @param {float} shifts New values of the shifts.
+        %
         function update(self, scales, shifts)
             self.scales = scales;
             self.shifts = shifts;
         end
         
+        % Calls the method to generate the chart from behavior parameters.
+        %
         function charts(self)
             self.compactParameterCharts();
             self.plotFunctionVals();
@@ -37,6 +58,10 @@ classdef ActivationFunction < handle
     end
     
     methods (Access = public)
+        % Initializes the performances matrices to save the parameter behavior.
+        %
+        %   @param {integer} samples Indicates the amounf of operations.
+        %
         function bootPerformance(self, samples)
             aux = zeros(samples, self.neurons);
             
@@ -47,6 +72,10 @@ classdef ActivationFunction < handle
             self.perfdfunOutput = aux;
         end
         
+        % Stores the current parameter values of the activation functions.
+        %
+        %   @param {integer} iteration Indicates the current operation.
+        %
         function setPerformance(self, iteration)
             self.perfScales(iteration,:) = self.scales;
             self.perfShifts(iteration,:) = self.shifts;
@@ -55,6 +84,15 @@ classdef ActivationFunction < handle
             self.perfdfunOutput(iteration,:) = self.dfuncOutput;
         end
         
+        % Returns the performance of all parameters from the activation functions
+        % during the whole time simulation.
+        %
+        %   @returns {float} scales Matrix of scaling values.
+        %   @returns {float} shifts Matrix of shifting values.
+        %   @returns {float} scales Matrix of tau values.
+        %   @returns {float} scales Matrix of output function values.
+        %   @returns {float} scales Matrix of derivative function values.
+        %
         function [scales, shifts, tau, funcOutput, dfuncOutput] = getPerformance(self)
             scales = self.perfScales;
             shifts = self.perfShifts;
@@ -64,35 +102,68 @@ classdef ActivationFunction < handle
         end
     end
     
+    % These funcions are the getters and setters for each parameter class.
     methods (Access = public)
+        % Assigns the values of scale parameters.
+        %
+        %   @param {float} scales Indicates the scaling values.
+        %
         function setScales(self, scales)
             self.scales = scales;
         end
         
+        % Assigns the values of shift parameters.
+        %
+        %   @param {float} shifts Indicates the shifting values.
+        %
         function setShifts(self, shifts)
             self.shifts = shifts;
         end
         
+        % Gets the values of tau parameters.
+        %
+        %   @returns {float} tau Vector of the tau parameter values.
+        %
         function tau = getTau(self)
             tau = self.tau;
         end
         
+        % Gets the values of output of activation functions.
+        %
+        %   @returns {float} func Vector of the activation function values.
+        %
         function func = getFuncOutput(self)
             func = self.funcOutput;
         end
         
+        % Gets the value of the derivatives of activation functions.
+        %
+        %   @returns {float} dfunc Vector of the derivative function values.
+        %
         function dfunc = getDerivative(self)
             dfunc = self.dfuncOutput;
         end
         
+        % Gets the values of scale parameters.
+        %
+        %   @returns {float} scales Vector of the scale parameter values.
+        %
         function scales = getScales(self)
             scales = self.scales;
         end
         
+        % Gets the values of shifts parameters.
+        %
+        %   @returns {float} shifts Vector of the shifts parameter values.
+        %        
         function shifts = getShifts(self)
             shifts = self.shifts;
         end
         
+        % Gets the amount of the neuron into the hidden layer from the neural network.
+        %
+        %   @returns {integer} neurons Amount of neurons.
+        %  
         function neurons = getNeurons(self)
             neurons = self.neurons;
         end
@@ -181,6 +252,7 @@ classdef ActivationFunction < handle
         end
         
         function calculateTau(self, instant)
+            instant = sum(instant);
             self.tau = (instant - self.shifts) ./ self.scales;
         end
         

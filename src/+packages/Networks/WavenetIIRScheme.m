@@ -55,6 +55,10 @@ classdef WavenetIIRScheme < handle
             self.inputLayer = values;
         end
         
+        function setSynapticWeights(self, weights)
+            self.synapticWeights = weights;
+        end
+        
         function weights = getSynapticWeights(self)
             weights = self.synapticWeights;
         end

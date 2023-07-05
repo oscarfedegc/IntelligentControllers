@@ -1,3 +1,4 @@
+% This class generate a simple table with the metrics from simulation data
 classdef IMetrics < handle
     methods (Static = true)
         function rst = ISE(vector, period)
