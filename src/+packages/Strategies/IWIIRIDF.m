@@ -42,7 +42,7 @@ classdef IWIIRIDF < Strategy
             self.feedforwards = 2;
             self.persistentSignal = 50;
             
-            self.learningRates = [10e-5 10e-5 5e-6 5e-1 5e-2];
+            self.learningRates = [0.1 0.1 5e-6 5e-1 5e-2];
             self.rangeSynapticWeights = 0.001;
             
             self.idxStates = [1 3];

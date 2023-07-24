@@ -21,6 +21,10 @@ classdef Plant < handle
             self.perfTerms = zeros(samples, self.nTerms);
         end
         
+        function setStateIter(self, state, iter)
+            self.states(iter,:) = state;
+        end
+        
         function positions = reads(self, degree)
             positions = self.states(:,degree);
         end

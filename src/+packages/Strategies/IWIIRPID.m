@@ -2,6 +2,8 @@
 classdef IWIIRPID < Strategy
     properties (Access = public)
         PREFIX = 'WaveNet-IIR PID'; % It is use to create the folder and output files
+        
+        ctrls2file
     end
     
     methods (Access = public)
@@ -22,11 +24,12 @@ classdef IWIIRPID < Strategy
 
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPID;
-            self.controllerGains = struct('pitch', [0.1 0 0], ...
-                                            'yaw', [0.1 0 0]);
-            self.controllerRates = struct('pitch', 1e-2.*zeros(1,3),...
-                                            'yaw', 1e-2.*zeros(1,3));
-            self.offsets = [12.5 -4.0];
+            self.controllerGains = struct('pitch', [15 5 5]/100, ...
+                                            'yaw', [10 5 7]/100);
+            self.controllerRates = struct('pitch', 0.*ones(1,3),...
+                                            'yaw', 0.*ones(1,3));
+            
+            self.offsets = [12.5 -4.5];
             
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
@@ -36,20 +39,19 @@ classdef IWIIRPID < Strategy
             self.inputs = 2;
             self.outputs = 2;
             self.amountFunctions = 3;
-            self.feedbacks = 5;
-            self.feedforwards = 4;
-            self.persistentSignal = 3.35e-10;
+            self.feedbacks = 4;
+            self.feedforwards = 2;
+            self.persistentSignal = 50;
             
-            self.learningRates = 0*[10e-5 10e-10 10e-7 10e-5 10e-5];
+            % learningRate = [Synaptic weights, scales, shifts, feedbacks, forwards]
+            self.learningRates = [10e-5 10e-5 5e-6 5e-1 5e-2]*0;
             self.rangeSynapticWeights = 0.001;
-            
-            self.idxStates = [1 3];
             
             self.idxStates = [1 3];
             
             % Training status and type reference signals
             self.isTraining = true;
-            self.typeReference = 'S01';
+            self.typeReference = 'P01';
             
             % Trajectory parameters (positions in degrees)
             switch self.typeReference
@@ -72,6 +74,7 @@ classdef IWIIRPID < Strategy
         function builder(self)
             % Building the trajectories
             self.trajectories = ITrajectory(self.tFinal, self.period, 'rads');
+            self.trajectories.setTypeRef(self.typeReference)
             
             if ~strcmp(self.isTraining,'S01')
                 self.trajectories.add(self.references.pitch)
@@ -127,29 +130,47 @@ classdef IWIIRPID < Strategy
             self.repository.setFolderPath()
             
             % Execute this part with ANN was trained
-            if ~self.isTraining
-                [scales, shifts, weights, feedbacks, feedforwards] = self.repository.readParameters();
-                self.neuralNetwork.setInitialValues(scales, shifts, weights, feedbacks, feedforwards)
-            end
+%             if false %~self.isTraining
+%                 [scales, shifts, weights, feedbacks, feedforwards] = self.repository.readParameters();
+%                 self.neuralNetwork.setInitialValues(scales, shifts, weights, feedbacks, feedforwards)
+%             end
         end
         
         % Executes the algorithm.
         function execute(self)
             self.repository.writeConfiguration()
+            
+            self.ctrls2file = zeros(self.trajectories.getSamples(),3);
 
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
                 yRef = self.trajectories.getReferences(iter);
                 
-                up = self.controllers(1).getSignal() + self.offsets(1);
-                uy = self.controllers(2).getSignal() + self.offsets(2);
+                if iter > 100
+                    up = self.controllers(1).getSignal() + self.offsets(1);
+                    uy = self.controllers(2).getSignal() + self.offsets(2);
+                else
+                    up = self.controllers(1).getSignal();
+                    uy = self.controllers(2).getSignal();
+                end
+                    
                 u = [up uy];
+                
+                self.ctrls2file(iter,:) = [kT, u];
                 
                 self.neuralNetwork.evaluate(kT, u)
                 
                 yMes = self.model.measured(u, iter);
                 yEst = self.neuralNetwork.getOutputs();
                 Gamma = self.neuralNetwork.filterLayer.getGamma();
+                
+                mu = [0, 0];
+                sigma = [0.0075, 0.005];
+                noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
+                
+                self.model.addNoise(noise, iter);
+                
+                yMes = yMes + noise;
 
                 eTracking = yRef - yMes;
                 eIdentification = yMes - yEst;
@@ -173,21 +194,37 @@ classdef IWIIRPID < Strategy
                 
                 self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u, Gamma, self.isTraining)
             end
-            self.setMetrics()
+            self.setMetrics(self.idxStates)
         end
         
         function saveCSV(self)
+            time = self.trajectories.getInstants();
+            samples = length(time);
+            
+            if self.isTraining
+                temp = 'src/+repositories/values/CTRL SIGNALS 60S V01.csv';
+                temp2 = 'src/+repositories/values/CTRL SIGNALS 60S F01.csv';
+            else
+                temp = 'src/+repositories/values/CTRL SIGNALS 60S V02.csv';
+                temp2 = 'src/+repositories/values/CTRL SIGNALS 60S F02.csv';
+            end
+            
+            data = self.ctrls2file;
+            
+            writematrix(data, temp)
+            writematrix(data(1:4:samples,:), temp2)
+            
+            fprintf('\nResults saved on %s\n', self.repository.getSKU())
+            
             self.repository.writeFinalParameters()
             self.repository.setCutOffResults(false)
-            self.repository.write(self.metrics)
-            self.repository.setCutOffResults(true)
-            self.repository.write(self.metrics)
+            self.repository.write(self.metrics, self.idxStates, self.offsets)
         end
         
         function showCharts(self)
             self.neuralNetwork.charts('noncompact')
-            self.controllers(1).charts('Pitch controller', self.pitchCtrlOffset)
-            self.controllers(2).charts('Yaw controller', self.yawCtrlOffset)
+            self.controllers(1).charts('Pitch controller', self.offsets(1))
+            self.controllers(2).charts('Yaw controller', self.offsets(2))
             self.plotting()
         end
     end

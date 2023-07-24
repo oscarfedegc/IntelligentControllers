@@ -1,21 +1,20 @@
 % This class that calls the other classes and generates the simulations
-classdef IWIIRPMR < Strategy
+classdef IWIIRWAVE < Strategy
     properties (Access = public)
-        PREFIX = 'WaveNet-IIR PMR'; % It is use to create the folder and output files
-        
-        ctrls2file
+        PREFIX = 'WaveNet-IIR Identification'; % It is use to create the folder and output files
+        REPOSITORY 
     end
     
     methods (Access = public)
         % Class constructor
-        function self = IWIIRPMR()
+        function self = IWIIRWAVE()
             return
         end
         
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 10; % Simulation time [sec]
+            self.tFinal = 60; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -24,8 +23,8 @@ classdef IWIIRPMR < Strategy
 
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPMR;
-            self.controllerGains = struct('pitch', [200 100 75 0 0 0], ...
-                                            'yaw', [300 100 75 0 0 0]);
+            self.controllerGains = struct('pitch', [100 100 75 .1 .1 .1], ...
+                                            'yaw', [300 100 75 .5 .5 .5]);
             self.controllerRates = struct('pitch', 100.*ones(1,6),...
                                             'yaw', 100.*ones(1,6));
             
@@ -33,38 +32,42 @@ classdef IWIIRPMR < Strategy
             
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
-            self.functionType = FunctionList.window;
-            self.functionSelected = WindowList.flattop2;
+            self.functionType = FunctionList.wavelet;
+            self.functionSelected = WaveletList.morlet;
             
             self.inputs = 2;
             self.outputs = 2;
             self.amountFunctions = 3;
             self.feedbacks = 4;
             self.feedforwards = 2;
-            self.persistentSignal = 0.001;
+            self.persistentSignal = 50;
             
-            % learningRate = [Synaptic weights, scales, shifts, feedbacks, forwards]
-            self.learningRates = [0.1 0.1 5e-6 5e-1 5e-2];
+            % learningRate = [scales, shifts, weights, feedbacks, forwards]
+            self.learningRates = [10e-5 10e-5 5e-6 5e-1 5e-2];
+            self.learningRates = [1 1 5e-6 5e-1 5e-2];
             self.rangeSynapticWeights = 0.001;
             
             self.idxStates = [1 3];
             
-            % Training status and type reference signals
-            self.isTraining = false;
-            self.typeReference = 'P01';
+            % Training status
+            self.isTraining = true;
             
             % Trajectory parameters (positions in degrees)
-            switch self.typeReference
-                case 'P01'
-                    self.references = struct('pitch',  [-40 40 40 10 10 -20 -20 -40], ...
-                                             'yaw',    [0 -40 -40 0 0 40 40 0]);
-                                         
-                case 'P02'                                         
-                    self.references = struct('pitch',  [-20 -20 0 0 20 20], ...
-                                             'yaw',    [0 -10 -10 0 0 10 10]);
-                case 'S01'
-                    self.references = struct('pitch',  [5 0 0 -5 -10 -10 -10 -10 -5 0 -5 0], ...
-                                             'yaw',    [0 0 5 5 5 0 -5 -10 -5 0 5 0], ...
+            if self.isTraining
+                trajectorySelected = 1;
+                self.REPOSITORY = 'src/+repositories/values/CTRL SIGNALS 60S V01.csv';
+            else
+                trajectorySelected = 2;
+                self.REPOSITORY = 'src/+repositories/values/CTRL SIGNALS 60S V02.csv';
+            end
+            
+            switch trajectorySelected
+                case 1
+                    self.references = struct('pitch',  0, ...
+                                             'yaw',    0);
+                case 2
+                    self.references = struct('pitch',  [5 0 0 -5 -5 0 5 10 0 5 5 0], ...
+                                             'yaw',    [0 0 5 5 5 0 -5 -10 0 0 5 0],...
                                              'tpitch', 5:5:self.tFinal,...
                                              'tyaw',   5:5:self.tFinal);
             end
@@ -74,15 +77,16 @@ classdef IWIIRPMR < Strategy
         function builder(self)
             % Building the trajectories
             self.trajectories = ITrajectory(self.tFinal, self.period, 'rads');
-            self.trajectories.setTypeRef(self.typeReference)
             
-            if ~strcmp(self.isTraining,'S01')
+            if self.isTraining
                 self.trajectories.add(self.references.pitch)
                 self.trajectories.add(self.references.yaw)
             else
                 self.trajectories.addPositions(self.references.pitch, self.references.tpitch)
                 self.trajectories.addPositions(self.references.yaw, self.references.tyaw)
             end
+            
+            self.dampingSignal()
             
             % Bulding the plant
             samples = self.trajectories.getSamples();
@@ -132,101 +136,47 @@ classdef IWIIRPMR < Strategy
             self.repository.setFolderPath()
             
             % Execute this part with ANN was trained
-%             if false %~self.isTraining
-%                 [scales, shifts, weights, feedbacks, feedforwards] = self.repository.readParameters();
-%                 self.neuralNetwork.setInitialValues(scales, shifts, weights, feedbacks, feedforwards)
-%             end
+            if ~self.isTraining
+                [scales, shifts, weights, feedbacks, feedforwards] = self.repository.readParameters();
+                self.neuralNetwork.setInitialValues(scales, shifts, weights, feedbacks, feedforwards)
+            end
         end
         
         % Executes the algorithm.
         function execute(self)
             self.repository.writeConfiguration()
-            
-            self.ctrls2file = zeros(self.trajectories.getSamples(),3);
 
             for iter = 1:self.trajectories.getSamples()
                 kT = self.trajectories.getTime(iter);
-                yRef = self.trajectories.getReferences(iter);
-                
-                if iter > 100
-                    up = self.controllers(1).getSignal() + self.offsets(1);
-                    uy = self.controllers(2).getSignal() + self.offsets(2);
-                else
-                    up = self.controllers(1).getSignal();
-                    uy = self.controllers(2).getSignal();
-                end
-                    
-                u = [up uy];
-                
-                self.ctrls2file(iter,:) = [kT, u];
+                u = self.trajectories.getReferences(iter);
                 
                 self.neuralNetwork.evaluate(kT, u)
                 
-                yMes = self.model.measured(u, iter);
+                yMes = [cos(kT*0.1), sin(kT*0.2)];
                 yEst = self.neuralNetwork.getOutputs();
                 Gamma = self.neuralNetwork.filterLayer.getGamma();
                 
-                mu = [0, 0];
-                sigma = [0.0075, 0.005];
-                noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
-                
-                self.model.addNoise(noise, iter);
-                
-                yMes = yMes + noise;
+                self.model.setStateIter([cos(kT*0.1), 0, sin(kT*0.2), 0], iter);
 
-                eTracking = yRef - yMes;
                 eIdentification = yMes - yEst;
                 
-                if isnan(eTracking(1)) || isnan(eTracking(2)) || ...
-                        isnan(eIdentification(1)) || isnan(eIdentification(2))
+                if isnan(eIdentification(1)) || isnan(eIdentification(2))
                     self.isSuccessfully = false;
                     break
                 end
                 
                 self.neuralNetwork.setPerformance(iter)
-                self.controllers(1).setPerformance(iter)
-                self.controllers(2).setPerformance(iter)
-                
                 self.neuralNetwork.updateGradientDescent(u, eIdentification)
-                
-                self.controllers(1).autotune(eTracking(1), eIdentification(1), Gamma(1))
-                self.controllers(2).autotune(eTracking(2), eIdentification(2), Gamma(2))
-                self.controllers(1).evaluate()
-                self.controllers(2).evaluate()
-                
-                self.log(kT, yRef, yMes, yEst, eTracking, eIdentification, u, Gamma, self.isTraining)
+                self.log(kT, yMes, yEst, eIdentification, u, Gamma, self.isTraining)
             end
-            self.setMetrics(self.idxStates)
         end
         
-        function saveCSV(self)
-            time = self.trajectories.getInstants();
-            samples = length(time);
-            
-            if self.isTraining
-                temp = 'src/+repositories/values/CTRL SIGNALS 60S V01.csv';
-                temp2 = 'src/+repositories/values/CTRL SIGNALS 60S F01.csv';
-            else
-                temp = 'src/+repositories/values/CTRL SIGNALS 60S V02.csv';
-                temp2 = 'src/+repositories/values/CTRL SIGNALS 60S F02.csv';
-            end
-            
-            data = self.ctrls2file;
-            
-            writematrix(data, temp)
-            writematrix(data(1:4:samples,:), temp2)
-            
-            fprintf('\nResults saved on %s\n', self.repository.getSKU())
-            
-            self.repository.writeFinalParameters()
-            self.repository.setCutOffResults(false)
-            self.repository.write(self.metrics, self.idxStates, self.offsets)
+        function saveCSV(~)
+            return
         end
         
         function showCharts(self)
             self.neuralNetwork.charts('noncompact')
-            self.controllers(1).charts('Pitch controller', self.offsets(1))
-            self.controllers(2).charts('Yaw controller', self.offsets(2))
             self.plotting()
         end
     end
@@ -236,19 +186,23 @@ classdef IWIIRPMR < Strategy
         %
         %   @param {float} kT Instant of the time.
         %
-        function log(self, kT, reference, measured, estimated, tracking, identification, control, gamma, training)
+        function log(self, kT, measured, estimated, identification, control, gamma, training)
             clc
-            reference = rad2deg(reference);
             measured = rad2deg(measured);
             estimated = rad2deg(estimated);
-            tracking = rad2deg(tracking);
             identification = rad2deg(identification);
             
-            fprintf(' :: %s CONTROLLER ::\n TIME >> %10.3f seconds \n', self.PREFIX, kT);
-            fprintf('PITCH >> yRef = %+010.4f   yMes = %+010.4f   yEst = %+010.4f   eTck = %+010.4f   eIdf = %+010.4f   signal = %+010.4f   gamma = %+010.4f   %d\n', ...
-                reference(1), measured(1), estimated(1), tracking(1), identification(1), control(1), gamma(1), training)
-            fprintf('  YAW >> yRef = %+010.4f   yMes = %+010.4f   yEst = %+010.4f   eTck = %+010.4f   eIdf = %+010.4f   signal = %+010.4f   gamma = %+010.4f   %d\n', ...
-                reference(2), measured(2), estimated(2), tracking(2), identification(2), control(2), gamma(2), training)
+            fprintf(' :: %s ::\n TIME >> %10.3f seconds \n', self.PREFIX, kT);
+            fprintf('PITCH >> yMes = %+010.4f   yEst = %+010.4f   eIdf = %+010.4f   signal = %+010.4f   gamma = %+010.4f   %d\n', ...
+                measured(1), estimated(1), identification(1), control(1), gamma(1), training)
+            fprintf('  YAW >> yMes = %+010.4f   yEst = %+010.4f   eIdf = %+010.4f   signal = %+010.4f   gamma = %+010.4f   %d\n', ...
+                measured(2), estimated(2), identification(2), control(2), gamma(2), training)
+        end
+        
+        function dampingSignal(self)            
+            data = readtable(self.REPOSITORY);
+            data = table2array(data);            
+            self.trajectories.setReferences([data(:,2) data(:,3)])
         end
     end
 end

@@ -33,11 +33,11 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             weights = self.synapticWeights;
             feedbacks = self.filterLayer.getFeedbacks();
             forwards = self.filterLayer.getFeedforwards();
-            rl = self.allLearningRates;
+            learningRate = self.allLearningRates;
             
             [scales,shifts,weights,feedbacks,forwards] = IOptimizer.GradientDescent( ...
                 scales,shifts,weights,feedbacks,forwards,...
-                gradienta, gradientb, gradientW, gradientC, gradientD, rl);
+                gradienta, gradientb, gradientW, gradientC, gradientD, learningRate);
             
             self.synapticWeights = weights;
             self.hiddenNeuronLayer.update(scales, shifts);
@@ -101,7 +101,7 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             B = self.derivativeMemory + 1;
             Z = self.filterLayer.iMemory + 1;
             Y = self.filterLayer.oMemory + 1;
-            p = 1
+            p = self.filterLayer.getPersistentSignal();
             
             GradientW = sum(controlSignals) * sum(error) * C' * A;
             Gradientb = sum(controlSignals) * If * (C' * B);

@@ -60,8 +60,10 @@ classdef IWavenetControllerPID < Controller
             ki = self.gains(2);
             kd = self.gains(3);
             ep = self.eTrackingMemory;
+            Ts = 0.005;
             
-            self.signal = u + kp*(ep(1) + ep(2)) + ki*ep(1) + kd*(ep(1) - 2*ep(2) + ep(3));
+            self.signal = u + kp*(ep(1) + ep(2)) + ki*ep(1)* Ts + ...
+                kd*(ep(1) - 2*ep(2) + ep(3)) / Ts;
         end
         
         % Shows the behavior of the gains and the control signal by means of a graph.

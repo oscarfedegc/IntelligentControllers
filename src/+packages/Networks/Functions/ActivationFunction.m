@@ -252,7 +252,7 @@ classdef ActivationFunction < handle
         end
         
         function calculateTau(self, instant)
-            instant = sum(instant);
+            instant = sum(instant.^2);
             self.tau = (instant - self.shifts) ./ self.scales;
         end
         

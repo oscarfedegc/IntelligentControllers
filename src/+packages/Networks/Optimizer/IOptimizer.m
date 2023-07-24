@@ -1,11 +1,11 @@
 classdef IOptimizer < handle
     methods (Static)
-        function [a,b,W,C,D] = GradientDescent(a,b,W,C,D,GDa,GDb,GDW,GDC,GDD,rl)
-            a = IOptimizer.ApplyGradientDescent(a, rl(1), GDa);
-            b = IOptimizer.ApplyGradientDescent(b, rl(2), GDb);
-            W = IOptimizer.ApplyGradientDescent(W, rl(3), GDW);
-            C = IOptimizer.ApplyGradientDescent(C, rl(4), GDC);
-            D = IOptimizer.ApplyGradientDescent(D, rl(5), GDD);
+        function [a,b,W,C,D] = GradientDescent(a,b,W,C,D,GDa,GDb,GDW,GDC,GDD,rate)
+            a = IOptimizer.ApplyGradientDescent(a, rate(1), GDa);
+            b = IOptimizer.ApplyGradientDescent(b, rate(2), GDb);
+            W = IOptimizer.ApplyGradientDescent(W, rate(3), GDW);
+            C = IOptimizer.ApplyGradientDescent(C, rate(4), GDC);
+            D = IOptimizer.ApplyGradientDescent(D, rate(5), GDD);
         end
         
         
