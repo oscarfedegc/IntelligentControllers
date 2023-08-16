@@ -22,6 +22,11 @@ classdef IMetrics < handle
             rst = sum(difference.^2) / length(target);
         end
         
+        function rst = MAE(target, estimated)
+            difference = abs(target - estimated);
+            rst = sum(difference) / length(target);
+        end
+        
         function rst = RMSE(target, estimated)
             rst = sqrt(IMetrics.MSE(target, estimated));
         end
@@ -104,6 +109,21 @@ classdef IMetrics < handle
             end
             
             disp(' ')
+        end
+        
+        function [R2, RMSE, MAE, AVG] = getInfoMetrics(target, estimated)
+            error = target - estimated;
+            
+            R2 = IMetrics.R2(target, estimated);
+            RMSE = IMetrics.RMSE(target, estimated);
+            MAE = IMetrics.MAE(target, estimated);
+            AVG = sum(error)/length(error);
+        end
+        
+        function printInfoMetrics(title, R2, RMSE, MEA, AVG)
+            fprintf(':: Metrics -- %s ::\n', title)
+            fprintf('\t\tR2 = %8.5f\t\tRMSE = %8.5f\t\tMEA = %8.5f\t\tAVG = %8.5f\n',...
+                R2, RMSE, MEA, AVG)
         end
     end
 end

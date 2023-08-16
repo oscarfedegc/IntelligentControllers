@@ -53,26 +53,89 @@ classdef Repository < handle
             self.setIndexes()
         end
         
-        function write(self, metrics, states, offsets)
+        function write(self, ~, states, offsets)
             self.setFolderPath()
             self.writeModelFiles(states)
             self.writeNeuralNetworkFiles()
             self.writeControllerFiles(offsets)
-            self.writeMetrics(metrics)
+            self.writeNorms()
+            self.writeMetrics()
         end
 
         function configuration = readConfiguration(self)
             configuration = readmatrix(self.configurationpath);
         end
         
-        function writeMetrics(self, values)
-            varnames = self.getMetricHeaders(2);
+        function metrics = getInfoMetrics(~, ID, target, estimated)
+            try
+                [R2, RMSE, MAE, AVG] = IMetrics.getInfoMetrics(target, estimated);
+                metrics = {ID R2, RMSE, MAE, AVG};
+            catch
+                metrics = {ID, NaN, NaN, NaN, NaN};
+            end
             
-            T = array2table(values, 'VariableNames', varnames);
-            writetable(T,[self.resultspath self.skuResults ' METRICS.csv'])
+            IMetrics.printInfoMetrics(ID, R2, RMSE, MAE, AVG)
+        end
+        
+        function writeMetrics(self)
+            filename = [self.resultspath self.skuResults ' PERFMODEL.csv'];
+            results = readtable(filename);
+            metrics = [];
             
-            if ~self.isCutOffResults
-                disp(' '), disp(T)
+            try
+                metrics = [metrics; self.getInfoMetrics('Identification pitch', results.mespitch, results.estpitch)];
+            catch
+            end
+            
+            try
+                metrics = [metrics; self.getInfoMetrics('Identification yaw', results.mesyaw, results.estyaw)];
+            catch
+            end
+            
+            try
+                metrics = [metrics; self.getInfoMetrics('Tracking pitch', results.refpitch, results.mespitch)];
+            catch
+            end
+            
+            try
+                metrics = [metrics; self.getInfoMetrics('Tracking yaw', results.refyaw, results.mesyaw)];
+            catch
+            end
+            
+            metrics = cell2table(metrics, 'VariableNames', {'ID','R2','RMSE','MAE','AVG'});
+            self.writeParameterFile(metrics, 'METRICS')
+        end
+        
+        % Calculates and saves the tracking error norm and the cost function
+        function writeNorms(self)
+            filename = [self.resultspath self.skuResults ' PERFMODEL.csv'];
+            results = readtable(filename);
+            
+            try
+                pitchepsilon = results.epsilonpitch;
+                yawepsilon = results.epsilonyaw;
+                norm = sqrt(pitchepsilon.^2 + yawepsilon.^2);
+                norm = array2table(norm,'VariableNames', {'norm'});
+                results = [results, norm];
+                writetable(results, filename)
+                fprintf('Norm saved\n')
+            catch
+                fprintf('Error! Norm did not save\n')
+            end
+            
+            filename = [self.resultspath self.skuResults ' PERFMODEL.csv'];
+            results = readtable(filename);
+            
+            try
+                pitcherror = results.errorpitch;
+                yawerror = results.erroryaw;                
+                costfunction = (1/2) * (pitcherror.^2 + yawerror.^2);
+                costfunction = array2table(costfunction,'VariableNames', {'costfunction'});
+                results = [results, costfunction];
+                writetable(results, filename)
+                fprintf('Cost function saved\n')
+            catch
+                fprintf('Error! Cost function did not save\n')
             end
         end
         
@@ -108,49 +171,72 @@ classdef Repository < handle
         end
 
         function generateSKU(self)
-            instance = self.neuralNetwork.getHiddenNeuronLayer();
-            typeReference = self.trajectories.getTypeRef();
-            nnstatus = self.neuralNetwork.getStatus();
-            
-            switch class(instance)
-                case 'IWavelet'
-                    name = string((instance.wavelet));
-                case 'IWindow'
-                    name = string((instance.window));
-                case 'IAtomic'
-                    name = 'atomic';
-            end
-
-            neurons = instance.getNeurons();
-            samples = self.trajectories.getSamples();
-            finalTime = self.trajectories.getTime(samples);
-
-            var = 'G';
-            fixed = 0;
-
-            if isa(self.controllers(1), 'IWavenetPMR')
-                var = 'L';
-                fixed = 1;
-            end
-
             try
-                gains = length(self.controllers(1).getGains());
-            catch
-                gains = 0;
-            end
-            
-            try
-                feedbacks = self.neuralNetwork.filterLayer.getCoeffsM();
-                forwards = self.neuralNetwork.filterLayer.getCoeffsN();
+                instance = self.neuralNetwork.getHiddenNeuronLayer();
+                typeReference = self.trajectories.getTypeRef();
+                nnstatus = self.neuralNetwork.getStatus();
 
-                temp = sprintf('/%s-J%02d-M%02d-N%02d', name, neurons, feedbacks, forwards);
-            catch
-                temp = sprintf('/%s-J%02d', name, neurons);
-            end
+                switch class(instance)
+                    case 'IWavelet'
+                        name = string((instance.wavelet));
+                    case 'IWindow'
+                        name = string((instance.window));
+                    case 'IAtomic'
+                        name = 'atomic';
+                end
 
-            self.skuParams = upper(sprintf('%s', temp));
-            self.skuResults = upper(sprintf('%s-%s%02d-T%03d-%s-%s', ...
-                temp, var, gains-fixed, finalTime, typeReference, nnstatus));
+                neurons = instance.getNeurons();
+                samples = self.trajectories.getSamples();
+                finalTime = self.trajectories.getTime(samples);
+
+                var = 'G';
+                fixed = 0;
+
+                if isa(self.controllers(1), 'IWavenetPMR')
+                    var = 'L';
+                    fixed = 1;
+                end
+
+                try
+                    gains = length(self.controllers(1).getGains());
+                catch
+                    gains = 0;
+                end
+
+                try
+                    feedbacks = self.neuralNetwork.filterLayer.getCoeffsM();
+                    forwards = self.neuralNetwork.filterLayer.getCoeffsN();
+
+                    temp = sprintf('/%s-J%02d-M%02d-N%02d', name, neurons, feedbacks, forwards);
+                catch
+                    temp = sprintf('/%s-J%02d', name, neurons);
+                end
+
+                self.skuParams = upper(sprintf('%s', temp));
+                self.skuResults = upper(sprintf('%s-%s%02d-T%03d-%s-%s', ...
+                    temp, var, gains-fixed, finalTime, typeReference, nnstatus));
+            catch
+                typeReference = self.trajectories.getTypeRef();
+                name = 'NonNNA';
+                
+                samples = self.trajectories.getSamples();
+                finalTime = self.trajectories.getTime(samples);
+
+                var = 'G';
+                fixed = 0;
+                
+                try
+                    gains = length(self.controllers(1).getGains());
+                catch
+                    gains = 0;
+                end
+
+                temp = sprintf('/%s', name);
+                
+                self.skuParams = upper(sprintf('%s', temp));
+                self.skuResults = upper(sprintf('%s-%s%02d-T%03d-%s-%s', ...
+                    temp, var, gains-fixed, finalTime, typeReference, 'NON'));
+            end
         end
 
         function setIndexes(self)

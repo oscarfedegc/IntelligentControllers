@@ -78,9 +78,10 @@ classdef IRepositoryWNETIIRPMR < Repository
             labels = self.model.getLabels();
             
             for i = 1:length(self.controllers)
-                temp = offsets(i) * ones(length(self.indexes),1);
                 performance = self.controllers(i).getPerformance();
-                performance(self.indexes,2) = performance(self.indexes,2) + temp;
+                performance(self.indexes,1) = offsets(i) + performance(self.indexes,1);
+                
+                performance(1,1) = 0;
                 
                 performance = [instants performance(self.indexes,:)];
 

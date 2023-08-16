@@ -1,31 +1,31 @@
 % This class that calls the other classes and generates the simulations
-classdef IWIIRPMR < Strategy
+classdef ICoNMICyT < Strategy
     properties (Access = public)
-        PREFIX = 'WaveNet-IIR PMR'; % It is use to create the folder and output files
+        PREFIX = 'CoNMICyT WaveNet-IIR PMR'; % It is use to create the folder and output files
         
         ctrls2file
     end
     
     methods (Access = public)
         % Class constructor
-        function self = IWIIRPMR()
+        function self = ICoNMICyT()
             return
         end
         
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 10; % Simulation time [sec]
+            self.tFinal = 60; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
             self.period = 0.005; % Plant sampling period [sec]
-            self.initialStates = [-40 0 0 0];
+            self.initialStates = [0 0 0 0];
 
             % Controller parameters
             self.controllerType = ControllerTypes.WavenetPMR;
-            self.controllerGains = struct('pitch', [200 100 75 0 0 0], ...
-                                            'yaw', [300 100 75 0 0 0]);
+            self.controllerGains = struct('pitch', [100 100 75 0.1 0.1 0.1], ...
+                                            'yaw', [100 100 75 0.1 0.1 0.1]);
             self.controllerRates = struct('pitch', 100.*ones(1,6),...
                                             'yaw', 100.*ones(1,6));
             
@@ -51,22 +51,15 @@ classdef IWIIRPMR < Strategy
             
             % Training status and type reference signals
             self.isTraining = false;
-            self.typeReference = 'P01';
+            self.typeReference = 'T01';
             
             % Trajectory parameters (positions in degrees)
             switch self.typeReference
-                case 'P01'
-                    self.references = struct('pitch',  [-40 40 40 10 10 -20 -20 -40], ...
-                                             'yaw',    [0 -40 -40 0 0 40 40 0]);
-                                         
-                case 'P02'                                         
-                    self.references = struct('pitch',  [-20 -20 0 0 20 20], ...
-                                             'yaw',    [0 -10 -10 0 0 10 10]);
-                case 'S01'
-                    self.references = struct('pitch',  [5 0 0 -5 -10 -10 -10 -10 -5 0 -5 0], ...
-                                             'yaw',    [0 0 5 5 5 0 -5 -10 -5 0 5 0], ...
-                                             'tpitch', 5:5:self.tFinal,...
-                                             'tyaw',   5:5:self.tFinal);
+                case 'T01'
+                    self.references = struct('pitch',  [-30 -20 0 0 20 30 30 0]', ...
+                                             'yaw',    [0 -30 -30 0 0 30 30 0]', ...
+                                             'tpitch', [0 5 15 20 35 40 55 60]',...
+                                             'tyaw',   [0 10 15 25 35 45 55 60]');
             end
         end
         
@@ -76,9 +69,8 @@ classdef IWIIRPMR < Strategy
             self.trajectories = ITrajectory(self.tFinal, self.period, 'rads');
             self.trajectories.setTypeRef(self.typeReference)
             
-            if ~strcmp(self.isTraining,'S01')
-                self.trajectories.add(self.references.pitch)
-                self.trajectories.add(self.references.yaw)
+            if strcmp(self.typeReference,'T01')
+                self.trajectories.addPositionsWithTime(self.references)
             else
                 self.trajectories.addPositions(self.references.pitch, self.references.tpitch)
                 self.trajectories.addPositions(self.references.yaw, self.references.tyaw)
@@ -130,18 +122,11 @@ classdef IWIIRPMR < Strategy
             self.repository.setNeuralNetwork(self.neuralNetwork)
             self.repository.setTrajectories(self.trajectories)
             self.repository.setFolderPath()
-            
-            % Execute this part with ANN was trained
-%             if false %~self.isTraining
-%                 [scales, shifts, weights, feedbacks, feedforwards] = self.repository.readParameters();
-%                 self.neuralNetwork.setInitialValues(scales, shifts, weights, feedbacks, feedforwards)
-%             end
         end
         
         % Executes the algorithm.
         function execute(self)
             self.repository.writeConfiguration()
-            
             self.ctrls2file = zeros(self.trajectories.getSamples(),3);
 
             for iter = 1:self.trajectories.getSamples()
@@ -166,14 +151,27 @@ classdef IWIIRPMR < Strategy
                 yEst = self.neuralNetwork.getOutputs();
                 Gamma = self.neuralNetwork.filterLayer.getGamma();
                 
-                mu = [0, 0];
-                sigma = [0.0075, 0.005];
+                % Induced noise
+                mu = [0 0];
+                sigma = [0 0];
                 noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
                 
                 self.model.addNoise(noise, iter);
                 
-                yMes = yMes + noise;
-
+                % Induced disturbance on the heading axis
+                if kT >= 20 && kT <= 30
+                    perturbation = [-deg2rad(5), 0];
+                elseif kT >= 30
+                    perturbation = [-deg2rad(5), deg2rad(10)];
+                else
+                    perturbation = [0, 0];
+                end
+                
+                self.model.addPerturbation(perturbation, iter);
+                
+                % Measured position after noise and perturbations
+                yMes = self.model.getCurrentState(iter);
+                
                 eTracking = yRef - yMes;
                 eIdentification = yMes - yEst;
                 
@@ -221,6 +219,7 @@ classdef IWIIRPMR < Strategy
             self.repository.writeFinalParameters()
             self.repository.setCutOffResults(false)
             self.repository.write(self.metrics, self.idxStates, self.offsets)
+            self.getDataMetrics()
         end
         
         function showCharts(self)
@@ -249,6 +248,14 @@ classdef IWIIRPMR < Strategy
                 reference(1), measured(1), estimated(1), tracking(1), identification(1), control(1), gamma(1), training)
             fprintf('  YAW >> yRef = %+010.4f   yMes = %+010.4f   yEst = %+010.4f   eTck = %+010.4f   eIdf = %+010.4f   signal = %+010.4f   gamma = %+010.4f   %d\n', ...
                 reference(2), measured(2), estimated(2), tracking(2), identification(2), control(2), gamma(2), training)
+        end
+        
+        function getDataMetrics(self)
+            clc;
+            desired = rad2deg(self.trajectories.getAllReferences());
+            measurement = rad2deg(self.model.getPerformance(self.idxStates));
+            approximation = rad2deg(self.neuralNetwork.getBehaviorApproximation());
+            IMetrics.infoMetrics(desired, measurement, approximation, self.period)
         end
     end
 end

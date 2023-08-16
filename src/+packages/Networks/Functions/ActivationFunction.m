@@ -170,6 +170,7 @@ classdef ActivationFunction < handle
     end
     
     methods (Access = protected)
+        % Plots the function parameters in one figure
         function compactParameterCharts(self)
             cols = 3;
             rows = 1;
@@ -245,17 +246,37 @@ classdef ActivationFunction < handle
             xlabel('Samples, k');
         end
         
+        %{
+            Gets the scales and shift values
+        
+            @returns
+                scales {float} vector of values
+                shifts {float} vector of values
+        %}
         function [scales, shifts] = getInitialValues(self)
             data = 1;
             scales = data .* ones(1,self.neurons);
             shifts = data:data:data*self.neurons;
         end
         
+        %{
+            Calculates the tau vector for the activation function
+        
+            @args
+                instant {float} instant of the operation in seconds
+        %}
         function calculateTau(self, instant)
             instant = sum(instant.^2);
             self.tau = (instant - self.shifts) ./ self.scales;
         end
         
+        %{
+            Normalized the vector tau
+        
+            @args
+                inf {float} inferior limit of the normalized vector
+                sup {float} superior limit of the normalized vector
+        %}
         function normalizedTau(self, inf, sup)
             data = self.tau;
             self.tau = inf + (data - min(data)).*(sup - inf)./(max(data) - min(data));

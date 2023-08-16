@@ -9,7 +9,7 @@ classdef Strategy < handle
         trajectories % {must be ITrajectories}
         repository % {must be IRepository}
         isSuccessfully % {must be Bolean}
-        isTraining % {must be Bolean}
+        isTraining % {must be Boolean}
     end
     
     properties (Access = protected)
@@ -234,6 +234,12 @@ classdef Strategy < handle
             desired = self.trajectories.getAllReferences();
             measurement = self.model.getPerformance(states);
             approximation = self.neuralNetwork.getBehaviorApproximation();
+            
+            initial = 500;
+            samples = length(desired(:,1));
+            desired = rad2deg(desired(initial:samples,:));
+            measurement = rad2deg(measurement(initial:samples,:));
+            approximation = rad2deg(approximation(initial:samples,:));
 
             self.metrics = [];
 
@@ -244,7 +250,7 @@ classdef Strategy < handle
                         IMetrics.RMSE(measurement(:,i), approximation(:,i))];
                     
                 self.metrics = [self.metrics temp];
-            end            
+            end
         end
     end
 end

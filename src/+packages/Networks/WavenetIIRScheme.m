@@ -6,7 +6,7 @@ classdef WavenetIIRScheme < handle
         synapticWeights, perfSynapticWeights, perfOutputNL {mustBeNumeric}
         functionMemory, derivativeMemory, outputLayer, synapticRange, perfWavenet {mustBeNumeric}
         hiddenNeuronLayer % {must be AbstractActivationFunction}
-        filterLayer % {must be ImplementFilters}
+        filterLayer % {must be IFilters}
         optimizer % {must be IOptimizer)
         isTraining % {must be Boolean}
     end

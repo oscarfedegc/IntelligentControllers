@@ -11,6 +11,9 @@ classdef Plant < handle
     % Theses functions must be implemented in all inherited classes.
     methods (Abstract = true)
         measured();
+        getCurrentState();
+        addNoise();
+        addPerturbation();
     end
     
     methods (Access = public)
@@ -28,7 +31,7 @@ classdef Plant < handle
         function positions = reads(self, degree)
             positions = self.states(:,degree);
         end
-
+        
         function positions = getPerformance(self, states)
             n = length(self.states(:,1)) - 1;
             positions = self.states(1:n, states);

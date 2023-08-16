@@ -21,7 +21,7 @@ classdef IWavenetControllerPID < Controller
         %                                    the wavenet output.
         %   @param {float} gamma Represents a wavenet parameter.
         %
-        function autotune(self, trackingErr, identificationErr, gamma)
+        function autotune(self, trackingErr, ~, gamma)
             self.updateMemory(trackingErr)
             
             kp = self.gains(1);
@@ -32,12 +32,11 @@ classdef IWavenetControllerPID < Controller
             md = self.updateRates(3);
             ep = self.eTrackingMemory;
             
-            kp = kp + mp*identificationErr*gamma*(ep(1) - ep(2));
-            ki = ki + mi*identificationErr*gamma*ep(1);
-            kd = kd + md*identificationErr*gamma*(ep(1) - 2*ep(2) + ep(3));
+            kp = kp + mp*gamma*(ep(1) - ep(2));
+            ki = ki + mi*gamma*ep(1);
+            kd = kd + md*gamma*(ep(1) - 2*ep(2) + ep(3));
             
             self.gains = [kp ki kd];
-            % self.normalized(1,2);
         end
         
         % This function is responsable for store the tracking error into an
@@ -62,8 +61,7 @@ classdef IWavenetControllerPID < Controller
             ep = self.eTrackingMemory;
             Ts = 0.005;
             
-            self.signal = u + kp*(ep(1) + ep(2)) + ki*ep(1)* Ts + ...
-                kd*(ep(1) - 2*ep(2) + ep(3)) / Ts;
+            self.signal = u + kp*(ep(1) - ep(2)) + ki*Ts*ep(1) + kd*(ep(1) - 2*ep(2) + ep(3));
         end
         
         % Shows the behavior of the gains and the control signal by means of a graph.
@@ -74,18 +72,23 @@ classdef IWavenetControllerPID < Controller
             figure('Name',title,'NumberTitle','off','units','normalized',...
                 'outerposition',[0 0 1 1]);
             
+            tag = {'Control signal';'Proportional'; 'Integral'; 'Derivative'};
+            subs = {'V';'p'; 'i'; 'd'};
+            samples = length(self.performance(:,1));
             items = length(self.performance(1,:));
             
             subplot(items, 1, 1)
-                plot(self.performance(:,1) + offset,'r','LineWidth',1)
-                ylabel('Control signal, u [V]')
-                
+                plot(offset + self.performance(:,1),'r','LineWidth',1)
+                ylabel(sprintf('%s [%s]', string(tag(1)), string(subs(1))))
+                xlabel('Samples, k')
+                xlim([1 samples])
+            
             for row = 2:items
                 subplot(items, 1, row)
                 plot(self.performance(:,row),'r','LineWidth',1)
-                ylabel(sprintf('K_{P_%i}', row))
+                ylabel(sprintf('%s, K_{%s}', string(tag(row)), string(subs(row))))
+                xlim([1 samples])
             end
-            xlabel('Samples, k')
         end
     end
     

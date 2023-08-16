@@ -1,14 +1,16 @@
 % This is the main class that calls the other classes and generates the simulations
 classdef Application < handle
     methods (Access = public)
-        % The constructor of the Application class.
-        %
-        %   @returns {object} self Instantiation of the class.
-        %
+        %{ 
+            The constructor of the Application class.
+        
+            @return {object} self Instantiation of the class
+        %}
         function self = Application()
             clc, close all, format short
             
             % Load the packages
+            addpath ('src/+packages/Classificator')
             addpath ('src/+packages/Controllers')
             addpath ('src/+packages/Graphics')
             addpath ('src/+packages/Networks')
@@ -24,15 +26,17 @@ classdef Application < handle
             % Instance the algorithm
             algorithm = Algorithm();
             
-            % Changes the algorithm to use.
-            %   NOTE: The user can implement new classes for new control strategies.
-            % SINTAX: algorithm.setAlgorithm(nameClass())
-%             algorithm.setAlgorithm(IWNETPID_CRAZYFLIE_6DOF())
-%             algorithm.setAlgorithm(IWIIRIDF())
-            algorithm.setAlgorithm(IWIIRPID())
-%             algorithm.setAlgorithm(IWIIRPMR())
-%             algorithm.setAlgorithm(IWIIRWAVE())
-
+            %{
+                Changes the algorithm to use.
+                NOTE: The user can implement new classes for new control strategies.
+                SINTAX: algorithm.setAlgorithm(nameClass())
+            %}
+%             algorithm.setAlgorithm(IWIIRWAVE)
+%             algorithm.setAlgorithm(IClassicalPIDPert)
+%             algorithm.setAlgorithm(IWIIRPIDPert)
+            algorithm.setAlgorithm(IWIIRPMRPert)
+%             algorithm.setAlgorithm(IClassicalCoNMICyT)
+%             algorithm.setAlgorithm(ICoNMICyT)
             
             % Simulation setup
             algorithm.setup()

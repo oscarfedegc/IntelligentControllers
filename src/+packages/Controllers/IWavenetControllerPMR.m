@@ -45,7 +45,7 @@ classdef IWavenetControllerPMR < Controller
         %   @param {float} gamma Represents a wavenet parameter.
         %   @param {float} period Sampling period of the plant.
         %
-        function autotune(self, trackingError, identificationError, Gamma)
+        function autotune(self, trackingError, ~, Gamma)
             self.updateMemory(trackingError);
             
             deltaGains = zeros(1, self.level + 1);
@@ -53,7 +53,7 @@ classdef IWavenetControllerPMR < Controller
             mu = self.updateRates;
             
             for i = 1:self.level + 1
-                deltaGains(i) = mu(i) * identificationError * Gamma * (epsilon(1,i) - epsilon(2,i));
+                deltaGains(i) = mu(i) * Gamma * (epsilon(1,i) - epsilon(2,i));
             end
             
             self.gains = self.gains + deltaGains;   

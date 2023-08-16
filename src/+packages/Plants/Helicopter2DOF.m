@@ -22,12 +22,21 @@ classdef Helicopter2DOF < Plant
             self.states(iter,3) = self.states(iter,3) + noise(2);
         end
         
+        function addPerturbation(self, disturbance, iter)
+            self.states(iter,1) = self.states(iter,1) + disturbance(1);
+            self.states(iter,3) = self.states(iter,3) + disturbance(2);
+        end
+        
         function order = getOrder(self)
             order = self.ORDER;
         end
         
         function labels = getLabels(self)
             labels = self.labels;
+        end
+        
+        function state = getCurrentState(self, iter)
+            state = self.states(iter,[1,3]);
         end
     end
     
