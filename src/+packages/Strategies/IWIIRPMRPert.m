@@ -15,7 +15,7 @@ classdef IWIIRPMRPert < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 60; % Simulation time [sec]
+            self.tFinal = 30; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -34,7 +34,7 @@ classdef IWIIRPMRPert < Strategy
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
             self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.polywog3;
+            self.functionSelected = WaveletList.polywog4;
             
             self.inputs = 2;
             self.outputs = 2;
@@ -51,7 +51,7 @@ classdef IWIIRPMRPert < Strategy
             
             % Training status and type reference signals
             self.isTraining = false;
-            self.typeReference = 'T03';
+            self.typeReference = 'T01';
             
             % Trajectory parameters (positions in degrees)
             switch self.typeReference
@@ -163,7 +163,7 @@ classdef IWIIRPMRPert < Strategy
                 
                 % Induced noise
                 mu = [0, 0];
-                sigma = [0.0075, 0.005];
+                sigma = [0.0025, 0.005];
                 noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
                 
 %                 self.model.addNoise(noise, iter);
