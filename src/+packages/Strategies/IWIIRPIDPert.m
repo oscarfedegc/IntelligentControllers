@@ -33,8 +33,8 @@ classdef IWIIRPIDPert < Strategy
             
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
-            self.functionType = FunctionList.window;
-            self.functionSelected = WindowList.flattop2;
+            self.functionType = FunctionList.wavelet;
+            self.functionSelected = WaveletList.polywog4;
             
             self.inputs = 2;
             self.outputs = 2;
@@ -51,7 +51,7 @@ classdef IWIIRPIDPert < Strategy
             
             % Training status and type reference signals
             self.isTraining = false;
-            self.typeReference = 'T02';
+            self.typeReference = 'T01';
             
             % Trajectory parameters (positions in degrees)
             switch self.typeReference
@@ -155,7 +155,7 @@ classdef IWIIRPIDPert < Strategy
                 
                 % Induced noise
                 mu = [0, 0];
-                sigma = [0.0075, 0.005];
+                sigma = [0.0025, 0.005];
                 noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
                 
 %                 self.model.addNoise(noise, iter);
