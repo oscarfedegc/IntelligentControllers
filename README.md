@@ -2,7 +2,7 @@
 
 This project implements intelligent controllers using wavelet neural networks (WaveNet) and infinite impulse response (IIR) filters to the positions control of nonlinear models, i.e., 2 Degree-of-Freedom (DoF) Quanser Helicopter model.
 
-**The last update is on July 10th, 2023.**
+**The last update is on November 22th, 2023.**
 
 # Installation
 
