@@ -21,7 +21,7 @@ This project implemented two kind of controllers: the Proportional-Integral-Deri
 
 To configurate a control strategy, there is a 'function setup(self)' in the listings, where you can determinate the simulation time, sampling period, initial controller gains, the WaveNet-IIR configuration, and reference signals.
 
-The 'Application.m' call a control strategy as follows: 
+The 'Application.m' calls the control strategy as follows: 
 ```python
   # Instruction:
     algorithm.setAlgorithm(NameStrategy())
