@@ -19,7 +19,16 @@ This project implemented two kind of controllers: the Proportional-Integral-Deri
 - IWIIRPIDPert.m: Implements a simulation using the WaveNet-IIR PID adding disturbances at system's output.
 - IWIIRPMRPert.m: Implements a simulation using the WaveNet-IIR PMR adding disturbances at system's output.
 
-A control strategy is call by 'Application.m' using the instruction: algorithm.setAlgorithm(NameStrategy()), for example algorithm.setAlgorithm(IWIIRPMRPert()). Then, running the class Application. 
+A control strategy is call by 'Application.m' as follows: 
+```python
+  # Instruction:
+    algorithm.setAlgorithm(NameStrategy())
+
+  # Example
+    algorithm.setAlgorithm(IWIIRPMRPert()) 
+```
+
+Then, running the class Application. 
 
 ## License
 This code is distributed under MIT LICENSE
