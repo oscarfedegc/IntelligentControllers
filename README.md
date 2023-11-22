@@ -12,6 +12,15 @@ This project implements intelligent controllers using wavelet neural networks (W
 2. Open the 'Application.m' file in MATLAB.
 3. Running the class Application from your command window or press the F5 key.
 
+## Control strategies
+This project implemented two kind of controllers: the Proportional-Integral-Derivative (PID) and the Proportional Multiresolution (PMR). The code for each is in 'src/+packages/Strategies/', each strategy are described below:
+
+- IClassicalPIDPert.m: Implements a simulation using the classical PID adding disturbances at system's output.
+- IWIIRPIDPert.m: Implements a simulation using the WaveNet-IIR PID adding disturbances at system's output.
+- IWIIRPMRPert.m: Implements a simulation using the WaveNet-IIR PMR adding disturbances at system's output.
+
+A control strategy is call by 'Application.m' using the instruction: algorithm.setAlgorithm(NameStrategy()), for example algorithm.setAlgorithm(IWIIRPMRPert()). Then, running the class Application. 
+
 ## License
 This code is distributed under MIT LICENSE
 
