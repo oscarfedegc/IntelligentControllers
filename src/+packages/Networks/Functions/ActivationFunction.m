@@ -20,7 +20,6 @@ classdef ActivationFunction < handle
         %
         function evaluate(self, instant)
             self.calculateTau(instant)
-            self.normalizedTau(-1,1)
             self.evaluateFunction()
         end
         
