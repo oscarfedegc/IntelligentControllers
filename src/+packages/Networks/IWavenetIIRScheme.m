@@ -164,21 +164,17 @@ classdef IWavenetIIRScheme < WavenetIIRScheme
             
             for col = 1:cols
                 for row = 1:rows
-                    subplot(rows, cols, 1 + cols*(row-1))
+                    subplot(rows, cols, col + cols*(row-1))
                 end
             end
             
             for col = 1:cols
                 for row = 1:rows
-                    subplot(rows, cols, 1 + cols*(row-1))
+                    subplot(rows, cols, col + cols*(row-1))
                         plot(weigths(:, row + (col-1)),'r','LineWidth',1)
                         ylabel(sprintf('w_{%i,%i}', col, row))
 
                     if row == rows; xlabel('Samples, k'); end
-
-                    subplot(rows, cols, 2 + cols*(row-1))
-                        plot(weigths(:,row),'r','LineWidth',1)
-                        ylabel(sprintf('w_{%i,%i}', col, row))
                 end
             end
             xlabel('Samples, k')

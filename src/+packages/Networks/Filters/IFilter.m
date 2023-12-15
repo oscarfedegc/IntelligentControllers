@@ -106,7 +106,7 @@ classdef IFilter < handle
         %   @param {integer} iteration Represents the current sample.
         %
         function setPerformance(self, iteration)
-            cols = 0:self.coeffsM:self.coeffsM*self.inputs;
+            cols = 0:self.coeffsM:self.coeffsM*self.outputs;
             for item = 1:length(cols)-1
                 self.perfFeedbacks(iteration, cols(item)+1:cols(item+1)) = self.feedbacks(item,:);
             end
