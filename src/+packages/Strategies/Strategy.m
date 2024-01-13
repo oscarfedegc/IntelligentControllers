@@ -50,18 +50,20 @@ classdef Strategy < handle
                 return
             end
             self.saveCSV();
-
-            population = self.trajectories.getSamples();
-            index = ISamplePopulation.getIndexes(population);
-            fprintf('Sample = %06d, indexes = %02d therefore sample size = %06d\n', ...
-                population, index, round(population/index))
+            
+            try
+                population = self.trajectories.getSamples();
+                index = ISamplePopulation.getIndexes(population);
+                fprintf('Sample = %06d, indexes = %02d therefore sample size = %06d\n', ...
+                    population, index, round(population/index))
+            catch
+            end
         end
         
         % This function calls a custom method to plot the behavior of the
         % controller parameters and Wavenet during simulation
         function charts(self)
             if ~self.isSuccessfully
-                return
             end
             self.showCharts();
         end
@@ -98,7 +100,6 @@ classdef Strategy < handle
             desired = self.trajectories.getAllReferences();
             measurement = self.model.getPerformance();
             approximation = self.neuralNetwork.getBehaviorApproximation();
-            wavenetoutputs = self.neuralNetwork.getBehaviorOutputs();
             trackingError = desired - measurement;
             identifError = measurement - approximation;
             time = 0:self.period:self.tFinal;
@@ -126,7 +127,6 @@ classdef Strategy < handle
                 hold on
                 plot(time, measurement(:,item),'b:','LineWidth',1.5)
                 plot(time, approximation(:,item),'k-.','LineWidth',1)
-                plot(time, wavenetoutputs(:,item),'r-.','LineWidth',1)
                 xlabel(sprintf('Time, t [sec]'))
                 ylabel(sprintf('%s (y_{r_\\%s}, y_\\%s)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 lgd = legend(sprintf('y_{\\%s}', string(lbl(item))), ...
@@ -175,7 +175,6 @@ classdef Strategy < handle
             desired = self.trajectories.getAllReferences();
             measurement = self.model.getPerformance(self.idxStates);
             approximation = self.neuralNetwork.getBehaviorApproximation();
-            wavenetoutputs = self.neuralNetwork.getPerfWavenet();
             
             rows = 2;
             cols = length(desired(1,:));
@@ -194,7 +193,8 @@ classdef Strategy < handle
                 yyaxis right
                 plot(instants,trackingError(:,item),'LineWidth',1)
                 ylabel(sprintf('\\epsilon_\\%s', string(lbl(item))))
-                lgd = legend(sprintf('Reference, y_{r_\\%s}', string(lbl(item))), ...
+                lgd = legend(...
+                    sprintf('Reference, y_{r_\\%s}', string(lbl(item))), ...
                     sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
                     sprintf('Tracking error, \\epsilon_{\\%s}', string(lbl(item))), ...
                     'Location','northoutside');
@@ -209,14 +209,13 @@ classdef Strategy < handle
                 hold on
                 plot(instants,measurement(:,item),'k','LineWidth',1)
                 plot(instants,approximation(:,item),'LineWidth',1)
-                plot(instants,wavenetoutputs(:,item),'LineWidth',1)
                 ylabel(sprintf('%s (y_{\\%s}, y_\\%s^\\Gamma)', string(tag(item)), string(lbl(item)), string(lbl(item))))
                 yyaxis right
                 plot(instants,identifError(:,item),'LineWidth',1)
                 ylabel(sprintf('e_\\%s', string(lbl(item))))
-                lgd = legend(sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
+                lgd = legend(...
+                    sprintf('Measurement, y_{\\%s}', string(lbl(item))), ...
                     sprintf('Approximation, y_{\\%s}^\\Gamma', string(lbl(item))), ...
-                    sprintf('Wavenet, z_{\\%s}', string(lbl(item))), ...
                     sprintf('Identification error, e_{\\%s}', string(lbl(item))), ...
                     'Location','northoutside');
                 lgd.NumColumns = 3;

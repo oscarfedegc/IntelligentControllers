@@ -10,7 +10,6 @@ classdef Application < handle
             clc, close all, format short
             
             % Load the packages
-            addpath ('src/+packages/Classificator')
             addpath ('src/+packages/Controllers')
             addpath ('src/+packages/Graphics')
             addpath ('src/+packages/Networks')
@@ -34,9 +33,10 @@ classdef Application < handle
 %             algorithm.setAlgorithm(IWIIRWAVE)
 %             algorithm.setAlgorithm(IClassicalPIDPert)
 %             algorithm.setAlgorithm(IWIIRPIDPert)
-            algorithm.setAlgorithm(IWIIRPMRPert)
+%             algorithm.setAlgorithm(IWIIRPMRPert)
 %             algorithm.setAlgorithm(IClassicalCoNMICyT)
 %             algorithm.setAlgorithm(ICoNMICyT)
+            algorithm.setAlgorithm(SoftIdentification)
             
             % Simulation setup
             algorithm.setup()

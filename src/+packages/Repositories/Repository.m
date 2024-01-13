@@ -15,7 +15,8 @@ classdef Repository < handle
         neuralNetwork % {must be NetworkScheme}
         trajectories % {must be ITrajectories}
         
-        configurationpath, valuespath, resultspath, cutrstspath, skuResults, skuParams % {must be String}
+        configurationpath, valuespath, resultspath % {must be String}
+        cutrstspath, skuResults, skuParams % {must be String}
         indexes {mustBeInteger}
         isCutOffResults % {must be Boolean}
     end
@@ -216,26 +217,13 @@ classdef Repository < handle
                 self.skuResults = upper(sprintf('%s-%s%02d-T%03d-%s-%s', ...
                     temp, var, gains-fixed, finalTime, typeReference, nnstatus));
             catch
-                typeReference = self.trajectories.getTypeRef();
                 name = 'NonNNA';
-                
-                samples = self.trajectories.getSamples();
-                finalTime = self.trajectories.getTime(samples);
-
                 var = 'G';
-                fixed = 0;
-                
-                try
-                    gains = length(self.controllers(1).getGains());
-                catch
-                    gains = 0;
-                end
 
                 temp = sprintf('/%s', name);
                 
                 self.skuParams = upper(sprintf('%s', temp));
-                self.skuResults = upper(sprintf('%s-%s%02d-T%03d-%s-%s', ...
-                    temp, var, gains-fixed, finalTime, typeReference, 'NON'));
+                self.skuResults = upper(sprintf('%s-%s %s', temp, var, 'NON'));
             end
         end
 

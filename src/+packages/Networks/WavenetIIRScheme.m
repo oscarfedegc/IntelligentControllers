@@ -63,6 +63,14 @@ classdef WavenetIIRScheme < handle
             weights = self.synapticWeights;
         end
         
+        function scales = getScales(self)
+            scales = self.scales;
+        end
+        
+        function shifts = getShifts(self)
+            shifts = self.shifts;
+        end
+        
         function setWnetIIROutputs(self, WnetVals, IITVals)
             self.outputIIRLayer = IITVals;
             self.outputNetworkLayer = WnetVals;
@@ -141,9 +149,42 @@ classdef WavenetIIRScheme < handle
         function bootOptimazer(self, neurons, outputs, coeffsM, coeffsN)
             self.optimizer = IOptimizer(neurons, outputs, coeffsM, coeffsN);
         end
+        
+        function log(self)
+            self.print('  a', self.hiddenNeuronLayer.getScales())
+            self.print('  b', self.hiddenNeuronLayer.getShifts())
+            self.print('tau', self.hiddenNeuronLayer.getTau())
+            self.print('wav', self.hiddenNeuronLayer.getFuncOutput())
+            self.print('out', self.outputNetworkLayer)
+            
+            
+            fks = self.filterLayer.getFeedbacks();
+            frs = self.filterLayer.getFeedforwards();
+            
+            for i = 1:length(fks(:,1))
+                self.print('fks', fks(i,:))
+                self.print('frs', frs(i,:))
+                disp(' ')
+            end
+        end
     end
     
     methods (Access = protected)
+        function print(~, label, array)
+            MAX_LINE = 3;
+            
+            disp(' ')
+            for item = 1:length(array)
+                fprintf('%s%02d = %+015.8f', label, item, array(item))
+                
+                if mod(item,MAX_LINE) == 0
+                    fprintf('\n')
+                else
+                    fprintf('\t')
+                end
+            end
+        end
+        
         function initialize(self)
             self.synapticWeights = self.getInitialValues();
             self.hiddenNeuronLayer.initialize();

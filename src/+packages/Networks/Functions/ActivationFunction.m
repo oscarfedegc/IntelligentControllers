@@ -205,7 +205,8 @@ classdef ActivationFunction < handle
             cols = 3;
             rows = self.neurons;
             
-            figure('Name','Scaling and shifting parameters','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+            figure('Name','Scaling and shifting parameters','NumberTitle','off','units',...
+                'normalized','outerposition',[0 0 1 1]);
             for row = 1:rows
                 subplot(rows, cols, 1 + cols*(row-1))
                     plot(self.perfScales(:,row),'r','LineWidth',1)
@@ -230,7 +231,8 @@ classdef ActivationFunction < handle
             cols = 2;
             rows = self.neurons;
             
-            figure('Name','Neuron outputs and its derivatives','NumberTitle','off','units','normalized','outerposition',[0 0 1 1]);
+            figure('Name','Neuron outputs and its derivatives','NumberTitle','off',...
+                'units','normalized','outerposition',[0 0 1 1]);
             for row = 1:rows
                 subplot(rows, cols, 1 + cols*(row-1))
                     plot(self.perfFuncOutput(:,row),'r','LineWidth',1)
@@ -253,9 +255,11 @@ classdef ActivationFunction < handle
                 shifts {float} vector of values
         %}
         function [scales, shifts] = getInitialValues(self)
-            data = 1;
-            scales = data .* ones(1,self.neurons);
-            shifts = data:data:data*self.neurons;
+            A = 250;
+            B = 10;
+            
+            scales = A*ones(1,self.neurons);
+            shifts = B:B:B*self.neurons;
         end
         
         %{
@@ -267,6 +271,7 @@ classdef ActivationFunction < handle
         function calculateTau(self, instant)
             instant = sum(instant.^2);
             self.tau = (instant - self.shifts) ./ self.scales;
+            self.tau = self.tau;
         end
         
         %{

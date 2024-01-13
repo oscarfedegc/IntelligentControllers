@@ -24,7 +24,7 @@ classdef IFilter < handle
             self.coeffsM = amountFeedbacks;
             self.coeffsN = amountFeedforwards;
             self.persistentSignal = pSignal;
-            self.initialize();
+            self.initialize()
         end
         
         % This functions initializes the values of the coefficients ans the
@@ -34,14 +34,13 @@ classdef IFilter < handle
         %   @param {float} feedforwards Indicates the array of coefficient values.
         %   @param {float} pSignal Denotes the persistent signal value.
         %
-        function initialize(self, feedbacks, feedforwards, pSignal)
-            if nargin < 3
-                [feedbacks, feedforwards, pSignal] = self.getInitialValues();
+        function initialize(self, feedbacks, feedforwards)
+            if nargin < 2
+                [feedbacks, feedforwards] = self.getInitialValues();
             end
             
             self.feedbacks = feedbacks;
             self.feedforwards = feedforwards;
-            self.persistentSignal = pSignal;
             
             self.iMemory = zeros(self.outputs, self.coeffsM);
             self.oMemory = zeros(self.outputs, self.coeffsN);
@@ -51,7 +50,7 @@ classdef IFilter < handle
         %
         %   @param {float} iValues Indicates the array of input values.
         %
-        function evaluate(self, iWavenet, iCtrlSignals)
+        function evaluate(self, ~, iWavenet, iCtrlSignals)
             self.updateIMemory(iWavenet);
             
             gamma = diag(self.feedbacks * self.iMemory')' .* sum(iCtrlSignals);
@@ -106,7 +105,7 @@ classdef IFilter < handle
         %   @param {integer} iteration Represents the current sample.
         %
         function setPerformance(self, iteration)
-            cols = 0:self.coeffsM:self.coeffsM*self.inputs;
+            cols = 0:self.coeffsM:self.coeffsM*self.outputs;
             for item = 1:length(cols)-1
                 self.perfFeedbacks(iteration, cols(item)+1:cols(item+1)) = self.feedbacks(item,:);
             end
@@ -148,7 +147,7 @@ classdef IFilter < handle
         
         % Calls the functions to show the filter behavior.
         function charts(self)
-            self.plotCoefficientes(self.perfFeedbacks, self.inputs, self.coeffsM, ...
+            self.plotCoefficientes(self.perfFeedbacks, self.outputs, self.coeffsM, ...
                 'Feedbacks coefficients', 'c');
             self.plotCoefficientes(self.perfFeedforwards, self.outputs, self.coeffsN, ...
                 'Feedforwards coefficients', 'd');
@@ -196,6 +195,11 @@ classdef IFilter < handle
         function persistentSignal = getPersistentSignal(self)
             persistentSignal = self.persistentSignal;
         end
+        
+        function setRangeCoeffs(self, feedbacks, forwards)
+            self.rangeFeedbacks = feedbacks;
+            self.rangeForwards = forwards;
+        end
     end
     
     methods (Access = protected)
@@ -219,14 +223,14 @@ classdef IFilter < handle
         %   @returns {float} feedforwards Coefficient values.
         %   @returns {float} pSignal The persistent signal value.
         %
-        function [feedbacks, feedforwards, pSignal] = getInitialValues(self)
+        function [feedbacks, feedforwards] = getInitialValues(self)
             randd = @(a,b,f,c) a + (b-a)*rand(f,c);
             
-            value = 1;
-            pSignal = 0.001;
+            valueA = 1;
+            valueB = 1;
             
-            feedbacks = randd(-value,value,self.outputs,self.coeffsM);
-            feedforwards= randd(-value,value,self.outputs,self.coeffsN);
+            feedbacks = randd(-valueA,valueA,self.outputs,self.coeffsM);
+            feedforwards= randd(-valueB,valueB,self.outputs,self.coeffsN);
         end
         
         % Shows the behavior of the filter coefficients by means of a graph.
