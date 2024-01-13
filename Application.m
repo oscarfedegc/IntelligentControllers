@@ -35,8 +35,12 @@ classdef Application < handle
 %             algorithm.setAlgorithm(IWIIRPIDPert)
 %             algorithm.setAlgorithm(IWIIRPMRPert)
 %             algorithm.setAlgorithm(IClassicalCoNMICyT)
+<<<<<<< HEAD
 %             algorithm.setAlgorithm(ICoNMICyT)
             algorithm.setAlgorithm(SoftIdentification)
+=======
+            algorithm.setAlgorithm(ICoNMICyT)
+>>>>>>> 1d37116a3c03de7795125b490fac3e13fc7b1601
             
             % Simulation setup
             algorithm.setup()
