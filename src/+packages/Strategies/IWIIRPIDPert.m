@@ -16,6 +16,7 @@ classdef IWIIRPIDPert < Strategy
         function setup(self)
             % Time parameters
             self.tFinal = 60; % Simulation time [sec]
+            rng(123) % Set random seed
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -33,8 +34,8 @@ classdef IWIIRPIDPert < Strategy
             
             % Wavenet-IIR parameters
             self.nnaType = NetworkList.WavenetIIR;
-            self.functionType = FunctionList.wavelet;
-            self.functionSelected = WaveletList.polywog4;
+            self.functionType = FunctionList.window;
+            self.functionSelected = WindowList.flattop2;
             
             self.inputs = 2;
             self.outputs = 2;
@@ -155,10 +156,10 @@ classdef IWIIRPIDPert < Strategy
                 
                 % Induced noise
                 mu = [0, 0];
-                sigma = [0.0025, 0.005];
+                sigma = [0.0025, 0.0025];
                 noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
                 
-%                 self.model.addNoise(noise, iter);
+                self.model.addNoise(noise, iter);
                 
                 % Induced disturbance on the heading axis
                 if kT >= 25 &&  kT <= 45

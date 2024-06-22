@@ -15,7 +15,7 @@ classdef IClassicalPIDPert < Strategy
         % In this function, the user must give the simulations parameters
         function setup(self)
             % Time parameters
-            self.tFinal = 15; % Simulation time [sec]
+            self.tFinal = 60; % Simulation time [sec]
             
             % Plant parameters
             self.plantType = PlantList.helicopter2DOF;
@@ -49,25 +49,20 @@ classdef IClassicalPIDPert < Strategy
             
             % Training status and type reference signals
             self.isTraining = false;
-            self.typeReference = 'T03';
+            self.typeReference = 'T01';
             
             % Trajectory parameters (positions in degrees)
             switch self.typeReference
                 case 'T01'
-                    self.references = struct('pitch',  [0  10  10  0  0 -10 -10  0]', ...
-                                             'yaw',    [0 -10 -10  0  0  10  10  0]', ...
-                                             'tpitch', [0   5  15 20 35  40  55 60]',...
-                                             'tyaw',   [0  10  15 25 35  45  55 60]');
+                    self.references = struct('pitch',  [0 10 10 0 0 -10 -10 0]', ...
+                                             'yaw',    [0 -10 -10 0 0 10 10 0]', ...
+                                             'tpitch', [0 5 15 20 35 40 55 60]',...
+                                             'tyaw',   [0 10 15 25 35 45 55 60]');
                 case 'T02'
                     self.references = struct('pitch',  [10 10 -5 -5 0 0 5 -10 5 5 -10 -10], ...
                                              'yaw',    [-10 -10 5 5 -5 0 0 10 10 -10 -5 10 10], ...
                                              'tpitch', 5:5:self.tFinal,...
                                              'tyaw',   5:5:self.tFinal);
-                case 'T03'
-                    self.references = struct('pitch',  [0 -20 -20  0  0 20 20 -20]', ...
-                                             'yaw',    [0 -10 -10  0  0 10 10   0]', ...
-                                             'tpitch', [0   5  10 15 30 35 40  60]',...
-                                             'tyaw',   [0  10  15 25 35 45 50  60]');
             end
         end
         
@@ -147,26 +142,23 @@ classdef IClassicalPIDPert < Strategy
                 u = [up uy];
                 
                 self.ctrls2file(iter,:) = [kT, u];
-                
                 yMes = self.model.measured(u, iter);
                 
                 % Induced noise
-%                 mu = [0, 0];
-%                 sigma = [0.0075, 0.005];
-%                 noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
-%                 
-%                 self.model.addNoise(noise, iter);
-%                 
-%                 % Induced disturbance on the heading axis
-%                 if kT >= 20 && kT <= 40
-%                     perturbation = [-deg2rad(10), 0];
-%                 elseif kT >= 20 && kT >= 40
-%                     perturbation = [-deg2rad(10), -deg2rad(10)];
-%                 else
-%                     perturbation = [0, 0];
-%                 end
-%                 
-%                 self.model.addPerturbation(perturbation, iter);
+                mu = [0, 0];
+                sigma = [0.0025, 0.005];
+                noise = [sigma(1)*randn(1,1) + mu(1), sigma(2)*randn(1,1) + mu(2)];
+                
+                self.model.addNoise(noise, iter)
+                
+                % Induced disturbance on the heading axis
+                if kT >= 25 &&  kT <= 45
+                    perturbation = [-deg2rad(10), 0];
+                else
+                    perturbation = [0, 0];
+                end
+                
+                self.model.addPerturbation(perturbation, iter)
                 
                 % Measured position after noise and perturbations                
                 yMes = self.model.getCurrentState(iter);

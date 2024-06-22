@@ -2,19 +2,37 @@
 classdef IMetrics < handle
     methods (Static = true)
         function rst = ISE(vector, period)
-            rst = sum(period .* vector.^2);
+            rst = 0;
+            % rst = sum(period .* vector.^2);
+            for i = 2:length(vector)
+                rst = rst + period * (vector(i)^2 + vector(i-1)^2);
+            end
+            rst = rst / 2;
         end
         
+        function rst = ITSE(vector, period)
+            rst = 0;
+            for i = 2:length(vector)
+                rst = rst + period * (i-1) * (vector(i)^2 + vector(i-1)^2);
+            end
+            rst = rst / 2;
+        end
+
         function rst = IAE(vector, period)
-            rst = sum(period .* abs(vector));
+            % rst = sum(period .* abs(vector));
+            rst = 0;
+            for i = 2:length(vector)
+                rst = rst + period * abs(vector(i) + vector(i-1));
+            end
+            rst = rst / 2;
         end
         
         function rst = IATE(vector, period)
-            for i = 1:length(vector)
-                k = i-1;
-                vector(i) = period * k * abs(vector(i));
+            rst = 0;
+            for i = 2:length(vector)
+                rst = rst + period * (i-1) * abs(vector(i) + vector(i-1));
             end
-            rst = sum(vector);
+            rst = rst / 2;
         end
         
         function rst = MSE(target, estimated)
@@ -109,6 +127,55 @@ classdef IMetrics < handle
             end
             
             disp(' ')
+        end
+
+        function showPerformance()
+            clc, format shortG
+            RST_WAVELETS = sprintf('src/+repositories/results/WAVENET-IIR PID/FLATTOP2-J03-M04-N02-G03-T060-T01-Y/FLATTOP2-J03-M04-N02-G03-T060-T01-Y PERFMODEL.csv');
+            RST_CLASSICAL = sprintf('src/+repositories/results/CLASSICAL PID/POLYWOG3-J03-M04-N02-G03-T060-T01-Y/POLYWOG3-J03-M04-N02-G03-T060-T01-Y PERFMODEL.csv');
+
+            wavelets = readtable(RST_WAVELETS);
+            classical = readtable(RST_CLASSICAL);
+
+            metrics = zeros(4,6);
+            period = 0.005;
+
+            % Pitch and yaw tracking error
+            errors = [wavelets.epsilonpitch, wavelets.epsilonyaw, classical.epsilonpitch, classical.epsilonyaw];
+
+            for col = 1:4
+                ISE  = IMetrics.ISE(errors(:,col), period);
+                ITSE = IMetrics.ITSE(errors(:,col), period);
+                IAE  = IMetrics.IAE(errors(:,col), period);
+                IATE = IMetrics.IATE(errors(:,col), period);
+
+                metrics(:,col) = [ISE, ITSE, IAE, IATE]';
+            end
+
+            metrics(:,5) = 100 * (metrics(:,3) - metrics(:,1)) ./ metrics(:,3);
+            metrics(:,6) = 100 * (metrics(:,4) - metrics(:,2)) ./ metrics(:,4);
+            IMetrics.printTableRst(metrics)
+        end
+
+        function printTableRst(metrics)
+            IMetrics.printRow('ISE', metrics(1,:))
+            IMetrics.printRow('ITSE', metrics(2,:))
+            IMetrics.printRow('IAE', metrics(3,:))
+            IMetrics.printRow('IATE', metrics(4,:))
+        end
+
+        function printRow(metric, values)
+            fprintf('%4s ', metric)
+
+            for i = 1:length(values)
+                if i < 5
+                    fprintf('& \\num{%05.2f} ', values(i))
+                else
+                    fprintf('& \\qty{%05.2f}{\\percent} ', values(i))
+                end
+            end
+
+            fprintf('\\\\\n')
         end
         
         function [R2, RMSE, MAE, AVG] = getInfoMetrics(target, estimated)

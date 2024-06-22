@@ -31,11 +31,11 @@ classdef Application < handle
                 SINTAX: algorithm.setAlgorithm(nameClass())
             %}
 %             algorithm.setAlgorithm(IWIIRWAVE)
-%             algorithm.setAlgorithm(IClassicalPIDPert)
-%             algorithm.setAlgorithm(IWIIRPIDPert)
-            algorithm.setAlgorithm(IWIIRPMRPert)
+            % algorithm.setAlgorithm(IClassicalPIDPert)
+            algorithm.setAlgorithm(IWIIRPIDPert)
+%             algorithm.setAlgorithm(IWIIRPMRPert)
 %             algorithm.setAlgorithm(IClassicalCoNMICyT)
-%            algorithm.setAlgorithm(ICoNMICyT)
+%             algorithm.setAlgorithm(ICoNMICyT)
             
             % Simulation setup
             algorithm.setup()
